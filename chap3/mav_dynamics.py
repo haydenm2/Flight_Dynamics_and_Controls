@@ -25,8 +25,7 @@ class mav_dynamics:
         # set initial states based on parameter file
         # _state is the 13x1 internal state of the aircraft that is being propagated:
         # _state = [pn, pe, pd, u, v, w, e0, e1, e2, e3, p, q, r]
-        self._state = np.array([
-                                ])
+        self._state = np.array([[MAV.pn0], [MAV.pe0], [MAV.pd0], [0], [MAV.v0], [MAV.w0], [MAV.e0], [MAV.e1], [MAV.e2], [MAV.e3], [MAV.p0], [MAV.q0], [MAV.r0]])
         self.msg_true_state = msg_state()
 
     ###################################
@@ -57,6 +56,10 @@ class mav_dynamics:
         self._state[7][0] = self._state.item(7)/normE
         self._state[8][0] = self._state.item(8)/normE
         self._state[9][0] = self._state.item(9)/normE
+
+        # Collision with ground
+        if self._state.item(2) > 0:
+            self._state[2] = 0
 
         # update the message class for the true state
         self._update_msg_true_state()
@@ -90,25 +93,26 @@ class mav_dynamics:
         n = forces_moments.item(5)
 
         # position kinematics
-        pn_dot =
-        pe_dot =
-        pd_dot =
+        pn_dot = (e1**2 + e0**2 - e2**2 - e3**2)*u + 2*(e1*e2-e3*e0)*v + 2*(e1*e3+e2*e0)*w
+        pe_dot = 2*(e1*e2+e3*e0)*u + (e2**2 + e0**2 - e1**2 - e3**2)*v + 2*(e2*e3-e1*e0)*w
+        pd_dot = 2*(e1*e3-e2*e0)*u + 2*(e2*e3+e1*e0)*v + (e3**2 + e0**2 - e1**2 - e2**2)*w
 
         # position dynamics
-        u_dot =
-        v_dot =
-        w_dot =
+        mass = MAV.mass
+        u_dot = (r*v - q*w) + 1/mass * fx
+        v_dot = (p*w - r*u) + 1/mass * fy
+        w_dot = (q*u - p*v) + 1/mass * fz
 
         # rotational kinematics
-        e0_dot =
-        e1_dot =
-        e2_dot =
-        e3_dot =
+        e0_dot = 0.5 * (-p*e1 - q*e2 - r*e3)
+        e1_dot = 0.5 * (p*e0 + r*e2 - q*e3)
+        e2_dot = 0.5 * (q*e0 - r*e1 + p*e3)
+        e3_dot = 0.5 * (r*e0 + q*e1 - p*e2)
 
         # rotatonal dynamics
-        p_dot =
-        q_dot =
-        r_dot = 
+        p_dot = (MAV.gamma1*p*q - MAV.gamma2*q*r) + (MAV.gamma3*l + MAV.gamma4*n)
+        q_dot = (MAV.gamma5*p*r - MAV.gamma6*(p**2 - r**2)) + (1/MAV.Jy*m)
+        r_dot = (MAV.gamma7*p*q - MAV.gamma1*q*r) + (MAV.gamma4*l + MAV.gamma8*n)
 
         # collect the derivative of the states
         x_dot = np.array([[pn_dot, pe_dot, pd_dot, u_dot, v_dot, w_dot,
