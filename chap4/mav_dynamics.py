@@ -94,20 +94,25 @@ class mav_dynamics:
         pn = state.item(0)
         pe = state.item(1)
         pd = state.item(2)
+
         u = state.item(3)
         v = state.item(4)
         w = state.item(5)
+
         e0 = state.item(6)
         e1 = state.item(7)
         e2 = state.item(8)
         e3 = state.item(9)
+
         p = state.item(10)
         q = state.item(11)
         r = state.item(12)
+
         #   extract forces/moments
         fx = forces_moments.item(0)
         fy = forces_moments.item(1)
         fz = forces_moments.item(2)
+
         l = forces_moments.item(3)
         m = forces_moments.item(4)
         n = forces_moments.item(5)
@@ -118,10 +123,9 @@ class mav_dynamics:
         pd_dot = 2 * (e1 * e3 - e2 * e0) * u + 2 * (e2 * e3 + e1 * e0) * v + (e3 ** 2 + e0 ** 2 - e1 ** 2 - e2 ** 2) * w
 
         # position dynamics
-        mass = MAV.mass
-        u_dot = (r * v - q * w) + 1 / mass * fx
-        v_dot = (p * w - r * u) + 1 / mass * fy
-        w_dot = (q * u - p * v) + 1 / mass * fz
+        u_dot = (r * v - q * w) + fx / MAV.mass
+        v_dot = (p * w - r * u) + fy / MAV.mass
+        w_dot = (q * u - p * v) + fz / MAV.mass
 
         # rotational kinematics
         e0_dot = 0.5 * (-p * e1 - q * e2 - r * e3)
@@ -131,7 +135,7 @@ class mav_dynamics:
 
         # rotatonal dynamics
         p_dot = (MAV.gamma1 * p * q - MAV.gamma2 * q * r) + (MAV.gamma3 * l + MAV.gamma4 * n)
-        q_dot = (MAV.gamma5 * p * r - MAV.gamma6 * (p ** 2 - r ** 2)) + (1 / MAV.Jy * m)
+        q_dot = (MAV.gamma5 * p * r - MAV.gamma6 * (p ** 2 - r ** 2)) + (m / MAV.Jy)
         r_dot = (MAV.gamma7 * p * q - MAV.gamma1 * q * r) + (MAV.gamma4 * l + MAV.gamma8 * n)
 
         # collect the derivative of the states
@@ -149,8 +153,9 @@ class mav_dynamics:
         e1 = self._state.item(7)
         e2 = self._state.item(8)
         e3 = self._state.item(9)
+
         phi, theta, psi = Quaternion2Euler(np.array([e0, e1, e2, e3]))
-        self._Vg = Euler2Rotation(phi, theta, psi).transpose() @ self._state[3:6]
+        self._Vg = Euler2Rotation(phi, theta, psi).transpose() @ self._state[3:6]  #In vehicle frame
 
         # compute airspeed
         self._Va = np.sqrt(self._ur**2 + self._vr**2 + self._wr**2)
@@ -170,17 +175,19 @@ class mav_dynamics:
         rho = MAV.rho
         S = MAV.S_wing
         a = self._alpha
-        b = self._beta
+        beta = self._beta
+        b = MAV.b
         c = MAV.c
         p = self._state.item(10)
         q = self._state.item(11)
         r = self._state.item(12)
+        Va = self._Va
 
         # control surface offsets
-        delta_a = delta[0]
-        delta_e = delta[1]
-        delta_r = delta[2]
-        delta_t = delta[3]
+        delta_a = delta.item(0)
+        delta_e = delta.item(1)
+        delta_r = delta.item(2)
+        delta_t = delta.item(3)
 
         # drag coefficients
         C_D_q = MAV.C_D_q
@@ -210,27 +217,32 @@ class mav_dynamics:
         C_n_da = MAV.C_n_delta_a
         C_n_dr = MAV.C_n_delta_r
 
-        f_p = 0.5*MAV.rho*MAV.S_prop*MAV.C_prop*np.array([(MAV.k_motor*delta_t)**2 - self.msg_true_state.Va**2, 0, 0])
-        m_p = np.array([-MAV.kTp*(MAV.kOmega*delta_t)**2, 0, 0])
+        f_g = Quaternion2Rotation(self._state[6:10]).transpose() @ np.array([[0], [0], [mass*g]])  #gravitational force
 
-        # Calculate forces/moments
-        # Longitudinal Aerodynamics
-        fx = f_p[0] + 0.5 * rho * self._Va**2 * S * (-self.C_D(a)*np.cos(a) + self.C_L(a)*np.sin(a)) + (-C_D_q*np.cos(a) + C_L_q*np.sin(a))*c/(2*self._Va)*q + (-C_D_de*np.cos(a) + C_L_de*np.sin(a))*delta_e
-        fz = f_p[2] + 0.5 * rho * self._Va**2 * S * (-self.C_D(a)*np.sin(a) - self.C_L(a)*np.cos(a)) + (-C_D_q*np.sin(a) - C_L_q*np.cos(a))*c/(2*self._Va)*q + (-C_D_de*np.sin(a) - C_L_de*np.cos(a))*delta_e
-        My = m_p[1] + 0.5 * rho * self._Va**2 * S * c * (C_m_0 + C_m_a*a + C_m_q*(c/(2*self._Va))*q + C_m_de*delta_e)
-        # Lateral Aerodynamics
-        fy = f_p[1] + 0.5 * rho * self._Va**2 * S * (C_Y_0 + C_Y_b*b + C_Y_p*(b/(2*self._Va))*p + C_Y_r*(b/(2*self._Va))*r + C_Y_da*delta_a + C_Y_dr*delta_r)
-        Mx = m_p[0] + 0.5 * rho * self._Va**2 * S * b * (C_l_0 + C_l_b*b + C_l_p*(b/(2*self._Va))*p + C_l_r*(b/(2*self._Va))*r + C_l_da*delta_a + C_l_dr*delta_r)
-        Mz = m_p[2] + 0.5 * rho * self._Va**2 * S * b * (C_n_0 + C_n_b*b + C_n_p*(b/(2*self._Va))*p + C_n_r*(b/(2*self._Va))*r + C_n_da*delta_a + C_n_dr*delta_r)
+        f_p = (0.5*MAV.rho*MAV.S_prop*MAV.C_prop) * np.array([[(MAV.k_motor*delta_t)**2 - self.msg_true_state.Va**2], [0], [0]])  # prop thrust
+        m_p = np.array([[-MAV.kTp*(MAV.kOmega*delta_t)**2], [0], [0]])  # prop torque
 
-        return np.array([[fx, fy, fz, Mx, My, Mz]]).T
+        C_D = lambda alpha: MAV.C_D_p + (MAV.C_L_0 + MAV.C_L_alpha*alpha)**2/(np.pi*MAV.e*MAV.AR)
+        sig = lambda alpha: (1 + np.exp(-MAV.M*(alpha-MAV.alpha0))+np.exp(MAV.M*(alpha+MAV.alpha0)))/((1+np.exp(-MAV.M*(alpha-MAV.alpha0)))*(1+np.exp(MAV.M*(alpha+MAV.alpha0))))
+        C_L = lambda alpha: (1-sig(alpha))*(MAV.C_L_0+MAV.C_L_alpha*alpha)+sig(alpha)*(2*np.sign(alpha)*np.sin(alpha)**2*np.cos(alpha))
+        C_X = lambda alpha: -C_D(alpha)*np.cos(alpha) + C_L(alpha)*np.sin(alpha)
+        C_X_q = lambda alpha: -C_D_q*np.cos(alpha) + C_L_q*np.sin(alpha)
+        C_X_de = lambda alpha: -C_D_de*np.cos(alpha) + C_L_de*np.sin(alpha)
+        C_Z = lambda alpha: -C_D(alpha)*np.sin(alpha) - C_L(alpha)*np.cos(alpha)
+        C_Z_q = lambda alpha: -C_D_q*np.sin(alpha) - C_L_q*np.cos(alpha)
+        C_Z_de = lambda alpha: -C_D_de*np.sin(alpha) - C_L_de*np.cos(alpha)
 
-    def C_D(self, alpha):
-        return MAV.C_D_p + (MAV.C_L_0 + MAV.C_L_alpha*alpha)**2/(np.pi*MAV.e*MAV.AR)
+        f_a = (0.5 * rho * Va**2 * S) * np.array([[C_X(a) + C_X_q(a)*(c/(2*Va))*q + C_X_de(a)*delta_e],
+                       [C_Y_0 + C_Y_b*beta + C_Y_p*(b/(2*Va))*p + C_Y_r*(b/(2*Va))*r + C_Y_da*delta_a + C_Y_dr*delta_r],
+                       [C_Z(a) + C_Z_q(a)*(c/(2*Va))*q + C_Z_de(a)*delta_e]])
+        f_total = f_g + f_a + f_p
 
-    def C_L(self, alpha):
-        sig = (1 + np.exp(-MAV.M*(alpha-MAV.alpha0))+np.exp(MAV.M*(alpha+MAV.alpha0)))/((1+np.exp(-MAV.M*(alpha-MAV.alpha0)))*(1+np.exp(MAV.M*(alpha+MAV.alpha0))))
-        return (1-sig)*(MAV.C_L_0+MAV.C_L_alpha*alpha)+sig*(2*np.sign(alpha)*np.sin(alpha)**2*np.cos(alpha))
+        m_a = (0.5 * rho * Va**2 * S * c) * np.array([[b*(C_l_0 + C_l_b*beta + C_l_p*(b/(2*Va))*p + C_l_r*(b/(2*Va))*r + C_l_da*delta_a + C_l_dr*delta_r)],
+                       [c*(C_m_0 + C_m_a*a + C_m_q*(c/(2*Va))*q + C_m_de*delta_e)],
+                       [b*(C_n_0 + C_n_b*beta + C_n_p*(b/(2*Va))*p + C_n_r*(b/(2*Va))*r + C_n_da*delta_a + C_n_dr*delta_r)]])
+        m_total = m_a + m_p
+
+        return np.array([[f_total.item(0), f_total.item(1), f_total.item(2), m_total.item(0), m_total.item(1), m_total.item(2)]]).T
 
     def _update_msg_true_state(self):
         # update the class structure for the true state:
@@ -245,8 +257,8 @@ class mav_dynamics:
         self.msg_true_state.phi = phi
         self.msg_true_state.theta = theta
         self.msg_true_state.psi = psi
-        self.msg_true_state.Vg = np.sqrt(self._state.item(3)**2 + self._state.item(4)**2 + self._state.item(5)**2)
-        self.msg_true_state.gamma = np.arctan2(self._Vg[2], np.sqrt(self._Vg[0]**2 + self._Vg[1]**2))
+        self.msg_true_state.Vg = np.sqrt(self._Vg.item(0)**2 + self._Vg.item(1)**2 + self._Vg.item(2)**2)
+        self.msg_true_state.gamma = np.arctan2(-self._Vg[2], np.sqrt(self._Vg[0]**2 + self._Vg[1]**2))
         self.msg_true_state.chi = np.arctan2(self._Vg[1], self._Vg[0])
         self.msg_true_state.p = self._state.item(10)
         self.msg_true_state.q = self._state.item(11)

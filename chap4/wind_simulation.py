@@ -14,11 +14,11 @@ class wind_simulation:
         self._steady_state = np.array([0, 0, 0])  #NED
 
         sig_u = 1.06
-        sig_v = 1.06
+        sig_v = sig_u
         sig_w = 0.7
         Va = 20
         Lu = 200
-        Lv = 200
+        Lv = Lu
         Lw = 50
         a1 = sig_u*np.sqrt(2*Va/Lu)
         a2 = sig_v*np.sqrt(3*Va/Lv)
