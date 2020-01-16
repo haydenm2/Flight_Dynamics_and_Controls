@@ -12,7 +12,7 @@ import numpy as np
 from message_types.msg_state import msg_state
 
 import parameters.aerosonde_parameters as MAV
-from tools.tools import Quaternion2Rotation, Quaternion2Euler, Euler2Rotation
+from tools.tools import Quaternion2Rotation, Quaternion2Euler, RotationVehicle2Body
 
 class mav_dynamics:
     def __init__(self, Ts):
@@ -151,7 +151,7 @@ class mav_dynamics:
         e3 = self._state.item(9)
 
         phi, theta, psi = Quaternion2Euler(np.array([e0, e1, e2, e3]))
-        Rvb = Euler2Rotation(phi, theta, psi)
+        Rvb = RotationVehicle2Body(phi, theta, psi)
 
         # calculate wind components
         self._wind = Rvb @ wind[0:3]
