@@ -144,10 +144,6 @@ class mav_dynamics:
         return x_dot
 
     def _update_velocity_data(self, wind=np.zeros((6,1))):
-        # compute relative airspeed components
-        self._ur = self._state.item(3) - wind.item(0)
-        self._vr = self._state.item(4) - wind.item(1)
-        self._wr = self._state.item(5) - wind.item(2)
 
         e0 = self._state.item(6)
         e1 = self._state.item(7)
@@ -155,7 +151,17 @@ class mav_dynamics:
         e3 = self._state.item(9)
 
         phi, theta, psi = Quaternion2Euler(np.array([e0, e1, e2, e3]))
-        self._Vg = Euler2Rotation(phi, theta, psi).transpose() @ self._state[3:6]  #In vehicle frame
+        Rvb = Euler2Rotation(phi, theta, psi)
+
+        # calculate wind components
+        self._wind = Rvb @ wind[0:3]
+        wind_combined = Rvb @ wind[0:3] + wind[3:6]
+        # compute relative airspeed components
+        self._ur = self._state.item(3) - wind_combined.item(0)
+        self._vr = self._state.item(4) - wind_combined.item(1)
+        self._wr = self._state.item(5) - wind_combined.item(2)
+
+        self.Vg = Rvb.transpose() @ self._state[3:6]  #In vehicle frame
 
         # compute airspeed
         self._Va = np.sqrt(self._ur**2 + self._vr**2 + self._wr**2)
@@ -257,9 +263,9 @@ class mav_dynamics:
         self.msg_true_state.phi = phi
         self.msg_true_state.theta = theta
         self.msg_true_state.psi = psi
-        self.msg_true_state.Vg = np.sqrt(self._Vg.item(0)**2 + self._Vg.item(1)**2 + self._Vg.item(2)**2)
-        self.msg_true_state.gamma = np.arctan2(-self._Vg[2], np.sqrt(self._Vg[0]**2 + self._Vg[1]**2))
-        self.msg_true_state.chi = np.arctan2(self._Vg[1], self._Vg[0])
+        self.msg_true_state.Vg = np.sqrt(self.Vg.item(0)**2 + self.Vg.item(1)**2 + self.Vg.item(2)**2)
+        self.msg_true_state.gamma = np.arctan2(-self.Vg[2], np.sqrt(self.Vg[0]**2 + self.Vg[1]**2))
+        self.msg_true_state.chi = np.arctan2(self.Vg[1], self.Vg[0])
         self.msg_true_state.p = self._state.item(10)
         self.msg_true_state.q = self._state.item(11)
         self.msg_true_state.r = self._state.item(12)
