@@ -49,6 +49,7 @@ class Plotter:
         self.app = pg.QtGui.QApplication([])
         self.window = pg.GraphicsWindow(title="States")
         self.window.resize(*self.default_window_size)
+        self.window.setGeometry(1000, 0, 900, 1000)  # args: upper_left_x, upper_right_y, width, height
         self.window.setBackground(self.background_color)
         self.old_windows = []
         self.row_plot_count = 0
