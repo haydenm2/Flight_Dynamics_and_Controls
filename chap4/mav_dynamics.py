@@ -154,7 +154,7 @@ class mav_dynamics:
         Rvb = RotationVehicle2Body(phi, theta, psi)
 
         # calculate wind components
-        self._wind = Rvb @ wind[0:3]
+        self._wind = wind[0:3]
         wind_combined = Rvb @ wind[0:3] + wind[3:6]
         # compute relative airspeed components
         self._ur = self._state.item(3) - wind_combined.item(0)
@@ -224,9 +224,34 @@ class mav_dynamics:
         C_n_dr = MAV.C_n_delta_r
 
         f_g = Quaternion2Rotation(self._state[6:10]).transpose() @ np.array([[0], [0], [mass*g]])  #gravitational force
+        
+        # Propeller Thrust Calculations
+        # map delta throttle command (0 to 1) into motor input voltage
+        V_in = MAV.V_max*delta_t
 
-        f_p = (0.5*MAV.rho*MAV.S_prop*MAV.C_prop) * np.array([[(MAV.k_motor*delta_t)**2 - self.msg_true_state.Va**2], [0], [0]])  # prop thrust
-        m_p = np.array([[-MAV.kTp*(MAV.kOmega*delta_t)**2], [0], [0]])  # prop torque
+        # Quadratic formula to solve for motor speed
+        a1 = MAV.rho * MAV.D_prop**5 / ((2.0*np.pi)**2) * MAV.C_Q0
+        b1 = MAV.rho * MAV.D_prop**4 / (2.0*np.pi) * MAV.C_Q1 * self._Va + (MAV.KQ**2)/MAV.R_motor
+        c1 = MAV.rho * MAV.D_prop**3 * MAV.C_Q2 * self._Va**2 - MAV.KQ / MAV.R_motor * V_in + MAV.KQ * MAV.i0
+
+        # Consider only positive root
+        Omega_op = (-b1 + np.sqrt(b1**2 - 4 * a1 * c1)) / (2.0 * a1)
+
+        # compute advance ratio
+        J_op = 2 * np.pi * self._Va / (Omega_op * MAV.D_prop)
+
+        # compute non-dimensionalized coefficients of thrust and torque
+        C_T = MAV.C_T2 * J_op**2 + MAV.C_T1 * J_op + MAV.C_T0
+        C_Q = MAV.C_Q2 * J_op**2 + MAV.C_Q1 * J_op + MAV.C_Q0
+
+        # add thrust and torque due to propeller
+        n = Omega_op / (2.0 * np.pi)
+        f_p = np.array([[MAV.rho * n**2 * MAV.D_prop**4 * C_T], [0], [0]])
+        m_p = np.array([[MAV.rho * n**2 * MAV.D_prop**5 * C_Q], [0], [0]])
+
+        # # Alternative Simplified Thrust model
+        # f_p = (0.5*MAV.rho*MAV.S_prop*MAV.C_prop) * np.array([[(MAV.k_motor*delta_t)**2 - self.msg_true_state.Va**2], [0], [0]])  # prop thrust
+        # m_p = np.array([[-MAV.kTp*(MAV.kOmega*delta_t)**2], [0], [0]])  # prop torque
 
         C_D = lambda alpha: MAV.C_D_p + (MAV.C_L_0 + MAV.C_L_alpha*alpha)**2/(np.pi*MAV.e*MAV.AR)
         sig = lambda alpha: (1 + np.exp(-MAV.M*(alpha-MAV.alpha0))+np.exp(MAV.M*(alpha+MAV.alpha0)))/((1+np.exp(-MAV.M*(alpha-MAV.alpha0)))*(1+np.exp(MAV.M*(alpha+MAV.alpha0))))
