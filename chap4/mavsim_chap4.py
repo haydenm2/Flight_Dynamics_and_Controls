@@ -30,26 +30,26 @@ sim_time = SIM.start_time
 print("Press Command-Q to exit...")
 while sim_time < SIM.end_time:
     if sim_time < SIM.end_time/6:  #increase altitude
-        delta_a = -0.075  # 0.0
-        delta_e = -0.08  # -0.2
+        delta_a = -0.018  # 0.0
+        delta_e = -0.1  # -0.2
         delta_r = 0.0  # 0.005
         delta_t = 1.0  # 0.5
     elif sim_time < 2 * SIM.end_time/8:
-        delta_a = -0.06  # 0.0
-        delta_e = -0.08  # -0.2
-        delta_r = 0.01  # 0.005
+        delta_a = -0.018  # 0.0
+        delta_e = -0.2  # -0.2
+        delta_r = 0.00  # 0.005
         delta_t = 1.0  # 0.5
     elif sim_time < 3 * SIM.end_time/8:
-        delta_a = -0.07  # 0.0
+        delta_a = -0.03  # 0.0
         delta_e = -0.08  # -0.2
         delta_r = -0.01  # 0.005
         delta_t = 1.0  # 0.5
     else:
-        delta_a = -0.06  # 0.0
+        delta_a = -0.018  # 0.0
         delta_e = -0.08  # -0.2
         delta_r = -0.01  # 0.005
         delta_t = 1.0  # 0.5
-    #-------set control surfaces-------------
+    # -------set control surfaces-------------
     delta = np.array([[delta_a, delta_e, delta_r, delta_t]]).T  # transpose to make it a column vector
 
     #-------physical system-------------
