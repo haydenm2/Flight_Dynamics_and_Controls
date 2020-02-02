@@ -268,8 +268,9 @@ class mav_dynamics:
                        [C_Y_0 + C_Y_b*beta + C_Y_p*(b/(2*Va))*p + C_Y_r*(b/(2*Va))*r + C_Y_da*delta_a + C_Y_dr*delta_r],
                        [C_Z(a) + C_Z_q(a)*(c/(2*Va))*q + C_Z_de(a)*delta_e]])
         f_total = f_g + f_a + f_p
+        self._forces = np.array([[f_total.item(0)], [f_total.item(1)], [f_total.item(2)]])
 
-        m_a = (0.5 * rho * Va**2 * S * c) * np.array([[b*(C_l_0 + C_l_b*beta + C_l_p*(b/(2*Va))*p + C_l_r*(b/(2*Va))*r + C_l_da*delta_a + C_l_dr*delta_r)],
+        m_a = (0.5 * rho * Va**2 * S) * np.array([[b*(C_l_0 + C_l_b*beta + C_l_p*(b/(2*Va))*p + C_l_r*(b/(2*Va))*r + C_l_da*delta_a + C_l_dr*delta_r)],
                        [c*(C_m_0 + C_m_a*a + C_m_q*(c/(2*Va))*q + C_m_de*delta_e)],
                        [b*(C_n_0 + C_n_b*beta + C_n_p*(b/(2*Va))*p + C_n_r*(b/(2*Va))*r + C_n_da*delta_a + C_n_dr*delta_r)]])
         m_total = m_a + m_p
