@@ -12,8 +12,24 @@ from tools.tools import Euler2Quaternion
 
 def compute_trim(mav, Va, gamma):
     # define initial state and input
-    state0 =
-    delta0 =
+    e = Euler2Quaternion(0.0, gamma, 0.0)
+    state0 = np.array([[mav._state.item(0)],  # (0) Position North
+                       [mav._state.item(1)],   # (1) Position East
+                       [mav._state.item(2)],   # (2) Position Down
+                       [Va],    # (3) Velocity body x
+                       [0.0],    # (4) Velocity body y
+                       [0.0],    # (5) Velocity body z
+                       [e.item(0)],    # (6) Quaternion e0
+                       [e.item(1)],    # (7) Quaternion e1
+                       [e.item(2)],    # (8) Quaternion e2
+                       [e.item(3)],    # (9) Quaternion e3
+                       [0.0],    # (10) Angular velocity body x
+                       [0.0],    # (11) Angular velocity body y
+                       [0.0]])   # (12) Angular velocity body z
+    delta0 = np.array([[0.0],   # Elevator
+                       [0.0],   # Aeleron
+                       [0.0],   # Rudder
+                       [0.5]])  # Throttle
     x0 = np.concatenate((state0, delta0), axis=0)
     # define equality constraints
     cons = ({'type': 'eq',
@@ -48,5 +64,28 @@ def compute_trim(mav, Va, gamma):
 
 # objective function to be minimized
 def trim_objective(x, mav, Va, gamma):
-  return J
+    # TODO include turning radius into quaternion trim state
+    # Define desired derivatives
+    x_dot_star = np.array([[0.0],  # (0) Position North
+                       [0.0],   # (1) Position East
+                       [Va*np.sin(gamma)],   # (2) Position Down
+                       [0.0],    # (3) Velocity body x
+                       [0.0],    # (4) Velocity body y
+                       [0.0],    # (5) Velocity body z
+                       [0.0],    # (6) Quaternion e0
+                       [0.0],    # (7) Quaternion e1
+                       [0.0],    # (8) Quaternion e2
+                       [0.0],    # (9) Quaternion e3
+                       [0.0],    # (10) Angular velocity body x
+                       [0.0],    # (11) Angular velocity body y
+                       [0.0]])   # (12) Angular velocity body z
+    # Calculate current derivatives
+    x_star = x[0:13]
+    delta_star = x[13:17]
+    mav._update_velocity_data()
+    forces_moments_ = mav._forces_moments(delta_star)
+    x_dot_current = mav._derivatives(x_star, forces_moments_)
+    # Penalty Function
+    J = np.linalg.norm(x_dot_star[2:13] - x_dot_current[2:13])**2
+    return J
 

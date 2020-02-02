@@ -162,6 +162,7 @@ class mav_dynamics:
         self._wr = self._state.item(5) - wind_combined.item(2)
 
         self.Vg = Rvb.transpose() @ self._state[3:6]  #In vehicle frame
+        self._Vg = np.linalg.norm(self.Vg)
 
         # compute airspeed
         self._Va = np.sqrt(self._ur**2 + self._vr**2 + self._wr**2)

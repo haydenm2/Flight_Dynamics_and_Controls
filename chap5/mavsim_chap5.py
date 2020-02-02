@@ -12,7 +12,6 @@ import numpy as np
 import parameters.simulation_parameters as SIM
 
 from chap2.mav_viewer import mav_viewer
-from chap2.video_writer import video_writer
 from chap3.data_viewer import data_viewer
 from chap4.mav_dynamics import mav_dynamics
 from chap4.wind_simulation import wind_simulation
@@ -20,13 +19,8 @@ from chap5.trim import compute_trim
 from chap5.compute_models import compute_ss_model, compute_tf_model
 
 # initialize the visualization
-VIDEO = False  # True==write video, False==don't write video
 mav_view = mav_viewer()  # initialize the mav viewer
 data_view = data_viewer()  # initialize view of data plots
-if VIDEO == True:
-    video = video_writer(video_name="chap5_video.avi",
-                         bounding_box=(0, 0, 1000, 1000),
-                         output_rate=SIM.ts_video)
 
 # initialize elements of the architecture
 wind = wind_simulation(SIM.ts_simulation)
@@ -63,15 +57,9 @@ while sim_time < SIM.end_time:
                      mav.msg_true_state, # estimated states
                      mav.msg_true_state, # commanded states
                      SIM.ts_simulation)
-    if VIDEO == True:
-        video.update(sim_time)
 
     #-------increment time-------------
     sim_time += SIM.ts_simulation
-
-if VIDEO == True:
-    video.close()
-
 
 
 
