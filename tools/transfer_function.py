@@ -45,6 +45,41 @@ class transfer_function:
         y = self._C @ self._state + self._D * u
         return y[0][0]
 
+    def print(self):
+        '''Print Transfer Function to Terminal'''
+        num = ""
+        den = ""
+        seperator = "-"
+        lnum = len(self.num[0])
+        lden = len(self.den[0])
+        for i in range(lnum):
+            if float(self.num[0][i]) == 0.0:
+                continue
+            if not i == 0:
+                num += " + "
+            num += str(self.num[0][i])
+            if lnum-i > 1:
+                num += "*s"
+                if lnum - i > 2:
+                    num += "^"
+                    num += str(lnum-(i+1))
+        for j in range(lden):
+            if float(self.den[0][j]) == 0.0:
+                continue
+            if not j == 0:
+                den += " + "
+            den += str(self.den[0][j])
+            if lden-j > 1:
+                den += "*s"
+                if lden - j > 2:
+                    den += "^"
+                    den += str(lden-(j+1))
+        lenmax = np.maximum(len(num), len(den))
+        seperator *= lenmax
+        print(num)
+        print(seperator)
+        print(den, "\n")
+
 if __name__ == "__main__":
     # instantiate the system
     Ts = 0.01  # simulation step size

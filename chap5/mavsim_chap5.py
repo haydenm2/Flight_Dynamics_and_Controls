@@ -29,15 +29,20 @@ mav = mav_dynamics(SIM.ts_simulation)
 # use compute_trim function to compute trim state and trim input
 Va = 25.
 gamma = 0.*np.pi/180.
-trim_state, trim_input = compute_trim(mav, Va, gamma)
+R = np.inf
+display_transfer = True
+display_ss = True
+display_trim = True
+
+trim_state, trim_input = compute_trim(mav, Va, gamma, R, display=display_trim)
 mav._state = trim_state  # set the initial state of the mav to the trim state
 delta = trim_input  # set input to constant constant trim input
 
 # # compute the state space model linearized about trim
-A_lon, B_lon, A_lat, B_lat = compute_ss_model(mav, trim_state, trim_input)
+A_lon, B_lon, A_lat, B_lat = compute_ss_model(mav, trim_state, trim_input, display=display_transfer)
 T_phi_delta_a, T_chi_phi, T_theta_delta_e, T_h_theta, \
 T_h_Va, T_Va_delta_t, T_Va_theta, T_beta_delta_r \
-    = compute_tf_model(mav, trim_state, trim_input)
+    = compute_tf_model(mav, trim_state, trim_input, display=display_ss)
 
 # initialize the simulation time
 sim_time = SIM.start_time
@@ -48,7 +53,7 @@ while sim_time < SIM.end_time:
 
     #-------physical system-------------
     #current_wind = wind.update()  # get the new wind vector
-    current_wind = np.zeros((6,1))
+    current_wind = np.zeros((6, 1))
     mav.update_state(delta, current_wind)  # propagate the MAV dynamics
 
     #-------update viewer-------------

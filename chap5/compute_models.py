@@ -13,27 +13,15 @@ from tools.transfer_function import transfer_function
 import parameters.aerosonde_parameters as MAV
 from parameters.simulation_parameters import ts_simulation as Ts
 
-def compute_tf_model(mav, trim_state, trim_input):
+def compute_tf_model(mav, trim_state, trim_input, display=False):
 
     # euler states
     e_state = euler_state(trim_state)
-    pn = e_state.item(0)
-    pe = e_state.item(1)
-    pd = e_state.item(2)
-    u = e_state.item(3)
-    v = e_state.item(4)
-    w = e_state.item(5)
-    phi = e_state.item(6)
     theta = e_state.item(7)
-    psi = e_state.item(8)
-    p = e_state.item(9)
-    q = e_state.item(10)
-    r = e_state.item(11)
+
 
     # control surface inputs
-    delta_a_star = trim_input[0]
     delta_e_star = trim_input[1]
-    delta_r_star = trim_input[2]
     delta_t_star = trim_input[3]
 
     # additional mav variables
@@ -56,6 +44,7 @@ def compute_tf_model(mav, trim_state, trim_input):
     T_phi_delta_a = transfer_function(num=np.array([[a_phi_2]]),
                                      den=np.array([[1, a_phi_1, 0]]),
                                      Ts=Ts)
+
     # chi to phi
     T_chi_phi = transfer_function(num=np.array([[g/Vg]]),
                                   den=np.array([[1, 0]]),
@@ -99,9 +88,28 @@ def compute_tf_model(mav, trim_state, trim_input):
                                    den=np.array([[1, a_v_1]]),
                                    Ts=Ts)
 
+    if display:
+        print("Calculated Transfer Function Forms")
+        print("T_phi_delta_a: ")
+        T_phi_delta_a.print()
+        print("T_chi_phi: ")
+        T_chi_phi.print()
+        print("T_beta_delta_r: ")
+        T_beta_delta_r.print()
+        print("T_theta_delta_e: ")
+        T_theta_delta_e.print()
+        print("T_h_theta: ")
+        T_h_theta.print()
+        print("T_h_Va: ")
+        T_h_Va.print()
+        print("T_Va_delta_t: ")
+        T_Va_delta_t.print()
+        print("T_Va_theta: ")
+        T_Va_theta.print()
+
     return T_phi_delta_a, T_chi_phi, T_theta_delta_e, T_h_theta, T_h_Va, T_Va_delta_t, T_Va_theta, T_beta_delta_r
 
-def compute_ss_model(mav, trim_state, trim_input):
+def compute_ss_model(mav, trim_state, trim_input, display=False):
     # euler states
     e_state = euler_state(trim_state)
     u_star = e_state.item(3)
@@ -114,10 +122,10 @@ def compute_ss_model(mav, trim_state, trim_input):
     r_star = e_state.item(11)
 
     # control surface inputs
-    delta_a_star = trim_input[0]
-    delta_e_star = trim_input[1]
-    delta_r_star = trim_input[2]
-    delta_t_star = trim_input[3]
+    delta_a_star = trim_input[0][0]
+    delta_e_star = trim_input[1][0]
+    delta_r_star = trim_input[2][0]
+    delta_t_star = trim_input[3][0]
 
     Va_star = mav._Va
     b = MAV.b
@@ -223,8 +231,8 @@ def compute_ss_model(mav, trim_state, trim_input):
                       [N_da, N_dr],
                       [0, 0],
                       [0, 0]])
-    A_lon = np.array([[X_u, X_w, X_q, -g*np.cos(theta_star)],
-                      [Z_u, Z_w, Z_q, -g*np.sin(theta_star)],
+    A_lon = np.array([[X_u, X_w, X_q, -g*np.cos(theta_star), 0],
+                      [Z_u, Z_w, Z_q, -g*np.sin(theta_star), 0],
                       [M_u, M_w, M_q, 0, 0],
                       [0, 0, 1, 0, 0],
                       [np.sin(theta_star), -np.cos(theta_star), 0, u_star*np.cos(theta_star) + w_star*np.sin(theta_star), 0]])
@@ -233,6 +241,15 @@ def compute_ss_model(mav, trim_state, trim_input):
                       [M_de, 0],
                       [0, 0],
                       [0, 0]])
+
+    if display:
+        print("Calculated State Space Forms")
+        print("A_lat: \n", A_lat, "\n")
+        print("B_lat: \n", B_lat, "\n")
+        print("A_lon: \n", A_lon, "\n")
+        print("B_lon: \n", B_lon, "\n")
+
+
     return A_lon, B_lon, A_lat, B_lat
 
 def euler_state(x_quat):
@@ -240,37 +257,37 @@ def euler_state(x_quat):
     # to x_euler with attitude represented by Euler angles
     e = np.array([[x_quat[6], x_quat[7], x_quat[8], x_quat[9]]])
     [phi, theta, psi] = Quaternion2Euler(e)
-    x_euler = np.array([[MAV.pn0],
-                            [MAV.pe0],
-                            [MAV.pd0],
-                            [MAV.u0],
-                            [MAV.v0],
-                            [MAV.w0],
+    x_euler = np.array([[x_quat[0][0]],
+                            [x_quat[1][0]],
+                            [x_quat[2][0]],
+                            [x_quat[3][0]],
+                            [x_quat[4][0]],
+                            [x_quat[5][0]],
                             [phi],
                             [theta],
                             [psi],
-                            [MAV.p0],
-                            [MAV.q0],
-                            [MAV.r0]])
+                            [x_quat[10][0]],
+                            [x_quat[11][0]],
+                            [x_quat[12][0]]])
     return x_euler
 
 def quaternion_state(x_euler):
     # convert state x_euler with attitude represented by Euler angles
     # to x_quat with attitude represented by quaternions
     e = Euler2Quaternion(x_euler[6], x_euler[7], x_euler[8])
-    x_quat = np.array([[MAV.pn0],  # (0)
-                            [MAV.pe0],  # (1)
-                            [MAV.pd0],  # (2)
-                            [MAV.u0],  # (3)
-                            [MAV.v0],  # (4)
-                            [MAV.w0],  # (5)
-                            [e[0]],  # (6)
-                            [e[1]],  # (7)
-                            [e[2]],  # (8)
-                            [e[3]],  # (9)
-                            [MAV.p0],  # (10)
-                            [MAV.q0],  # (11)
-                            [MAV.r0]])  # (12)
+    x_quat = np.array([[x_euler[0][0]],  # (0)
+                            [x_euler[1][0]],  # (1)
+                            [x_euler[2][0]],  # (2)
+                            [x_euler[3][0]],  # (3)
+                            [x_euler[4][0]],  # (4)
+                            [x_euler[5][0]],  # (5)
+                            [e[0][0]],  # (6)
+                            [e[1][0]],  # (7)
+                            [e[2][0]],  # (8)
+                            [e[3][0]],  # (9)
+                            [x_euler[9][0]],  # (10)
+                            [x_euler[10][0]],  # (11)
+                            [x_euler[11][0]]])  # (12)
     return x_quat
 
 def f_euler(mav, x_euler, input):

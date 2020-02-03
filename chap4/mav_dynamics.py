@@ -86,7 +86,7 @@ class mav_dynamics:
 
     ###################################
     # private functions
-    def _derivatives(self, state, forces_moments):
+    def _derivatives(self, state, forces_moments, euler=False):
         """
         for the dynamics xdot = f(x, u), returns f(x, u)
         """
@@ -127,20 +127,32 @@ class mav_dynamics:
         v_dot = (p * w - r * u) + fy / MAV.mass
         w_dot = (q * u - p * v) + fz / MAV.mass
 
-        # rotational kinematics
-        e0_dot = 0.5 * (-p * e1 - q * e2 - r * e3)
-        e1_dot = 0.5 * (p * e0 + r * e2 - q * e3)
-        e2_dot = 0.5 * (q * e0 - r * e1 + p * e3)
-        e3_dot = 0.5 * (r * e0 + q * e1 - p * e2)
-
         # rotatonal dynamics
         p_dot = (MAV.gamma1 * p * q - MAV.gamma2 * q * r) + (MAV.gamma3 * l + MAV.gamma4 * n)
         q_dot = (MAV.gamma5 * p * r - MAV.gamma6 * (p ** 2 - r ** 2)) + (m / MAV.Jy)
         r_dot = (MAV.gamma7 * p * q - MAV.gamma1 * q * r) + (MAV.gamma4 * l + MAV.gamma8 * n)
 
-        # collect the derivative of the states
-        x_dot = np.array([[pn_dot, pe_dot, pd_dot, u_dot, v_dot, w_dot,
-                           e0_dot, e1_dot, e2_dot, e3_dot, p_dot, q_dot, r_dot]]).T
+        if euler:
+            # rotational kinematics
+            phi, theta, psi = Quaternion2Euler(self._state[6:10])
+            phi_dot = p + q * np.sin(phi) * np.tan(theta) + r * np.cos(phi) * np.tan(theta)
+            theta_dot = q * np.cos(phi) + r * (-np.sin(phi))
+            psi_dot = q * np.sin(phi) / np.cos(theta) + r * np.cos(phi) / np.cos(theta)
+            # collect the derivative of the states
+            x_dot = np.array([[pn_dot, pe_dot, pd_dot, u_dot, v_dot, w_dot,
+                               phi_dot, theta_dot, psi_dot, p_dot, q_dot, r_dot]]).T
+        else:
+            # rotational kinematics
+            e0_dot = 0.5 * (-p * e1 - q * e2 - r * e3)
+            e1_dot = 0.5 * (p * e0 + r * e2 - q * e3)
+            e2_dot = 0.5 * (q * e0 - r * e1 + p * e3)
+            e3_dot = 0.5 * (r * e0 + q * e1 - p * e2)
+
+            # collect the derivative of the states
+            x_dot = np.array([[pn_dot, pe_dot, pd_dot, u_dot, v_dot, w_dot,
+                               e0_dot, e1_dot, e2_dot, e3_dot, p_dot, q_dot, r_dot]]).T
+        
+
         return x_dot
 
     def _update_velocity_data(self, wind=np.zeros((6,1))):

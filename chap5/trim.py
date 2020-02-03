@@ -1,16 +1,17 @@
 """
-compute_trim 
+compute_trim
     - Chapter 5 assignment for Beard & McLain, PUP, 2012
-    - Update history:  
+    - Update history:
         2/5/2019 - RWB
 """
 import sys
 sys.path.append('..')
 import numpy as np
 from scipy.optimize import minimize
-from tools.tools import Euler2Quaternion
+from tools.tools import Euler2Quaternion, Quaternion2Euler
+from chap5.compute_models import euler_state, quaternion_state
 
-def compute_trim(mav, Va, gamma):
+def compute_trim(mav, Va, gamma, R, display=False):
     # define initial state and input
     e = Euler2Quaternion(0.0, gamma, 0.0)
     state0 = np.array([[mav._state.item(0)],  # (0) Position North
@@ -26,8 +27,8 @@ def compute_trim(mav, Va, gamma):
                        [0.0],    # (10) Angular velocity body x
                        [0.0],    # (11) Angular velocity body y
                        [0.0]])   # (12) Angular velocity body z
-    delta0 = np.array([[0.0],   # Elevator
-                       [0.0],   # Aeleron
+    delta0 = np.array([[0.0],   # Aeleron
+                       [0.0],   # Elevator
                        [0.0],   # Rudder
                        [0.5]])  # Throttle
     x0 = np.concatenate((state0, delta0), axis=0)
@@ -55,20 +56,26 @@ def compute_trim(mav, Va, gamma):
                                 ])
              })
     # solve the minimization problem to find the trim states and inputs
-    res = minimize(trim_objective, x0, method='SLSQP', args = (mav, Va, gamma),
+    res = minimize(trim_objective, x0, method='SLSQP', args = (mav, Va, gamma, R),
                    constraints=cons, options={'ftol': 1e-10, 'disp': True})
     # extract trim state and input and return
     trim_state = np.array([res.x[0:13]]).T
     trim_input = np.array([res.x[13:17]]).T
+
+    if display:
+        print("Optimized Trim Output")
+        print("trim_states: \n", trim_state, "\n")
+        print("trim_inputs: \n", trim_input, "\n")
+
     return trim_state, trim_input
 
 # objective function to be minimized
-def trim_objective(x, mav, Va, gamma):
+def trim_objective(x, mav, Va, gamma, R):
     # TODO include turning radius into quaternion trim state
     # Define desired derivatives
     x_dot_star = np.array([[0.0],  # (0) Position North
                        [0.0],   # (1) Position East
-                       [Va*np.sin(gamma)],   # (2) Position Down
+                       [-Va*np.sin(gamma)],   # (2) Position Down
                        [0.0],    # (3) Velocity body x
                        [0.0],    # (4) Velocity body y
                        [0.0],    # (5) Velocity body z
@@ -79,9 +86,11 @@ def trim_objective(x, mav, Va, gamma):
                        [0.0],    # (10) Angular velocity body x
                        [0.0],    # (11) Angular velocity body y
                        [0.0]])   # (12) Angular velocity body z
+
     # Calculate current derivatives
     x_star = x[0:13]
     delta_star = x[13:17]
+    mav._state = x_star
     mav._update_velocity_data()
     forces_moments_ = mav._forces_moments(delta_star)
     x_dot_current = mav._derivatives(x_star, forces_moments_)
