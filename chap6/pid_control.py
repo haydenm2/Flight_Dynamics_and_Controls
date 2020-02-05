@@ -16,6 +16,7 @@ class pid_control:
         self.Ts = Ts
         self.limit = limit
         self.integrator = 0.0
+        self.differentiator = 0.0
         self.error_delay_1 = 0.0
         self.error_dot_delay_1 = 0.0
         # gains for differentiator
@@ -23,9 +24,38 @@ class pid_control:
         self.a2 = 2.0 / (2.0 * sigma + Ts)
 
     def update(self, y_ref, y, reset_flag=False):
+        # reset time history variables
+        if reset_flag:
+            self.integrator = 0.0
+            self.differentiator = 0.0
+            self.error_delay_1 = 0.0
+
+        # control calculations (see pg. 112)
+        error = y_ref - y
+        self.integrator += self.Ts/2*(self.error_delay_1 + error)
+        self.differentiator = self.a1*self.differentiator + self.a2*(error - self.error_delay_1)
+        u = self.kp*error + self.ki*self.integrator - self.kd*self.differentiator
+        u_sat = self._saturate(u)
+
+        # age data
+        self.error_delay_1 = error
         return u_sat
 
     def update_with_rate(self, y_ref, y, ydot, reset_flag=False):
+        # reset time history variables
+        if reset_flag:
+            self.integrator = 0.0
+            self.differentiator = 0.0
+            self.error_delay_1 = 0.0
+
+        # control calculations
+        error = y_ref - y
+        self.integrator += self.Ts / 2 * (self.error_delay_1 + error)
+        u = self.kp * error + self.ki * self.integrator - self.kd * ydot
+        u_sat = self._saturate(u)
+
+        # age data
+        self.error_delay_1 = error
         return u_sat
 
     def _saturate(self, u):
@@ -48,6 +78,14 @@ class pi_control:
         self.error_delay_1 = 0.0
 
     def update(self, y_ref, y):
+        # control calculations
+        error = y_ref - y
+        self.integrator += self.Ts / 2 * (self.error_delay_1 + error)
+        u = self.kp * error + self.ki * self.integrator
+        u_sat = self._saturate(u)
+
+        # age data
+        self.error_delay_1 = error
         return u_sat
 
     def _saturate(self, u):
@@ -69,6 +107,10 @@ class pd_control_with_rate:
         self.limit = limit
 
     def update(self, y_ref, y, ydot):
+        # control calculations
+        error = y_ref - y
+        u = self.kp * error - self.kd * ydot
+        u_sat = self._saturate(u)
         return u_sat
 
     def _saturate(self, u):

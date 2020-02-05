@@ -56,15 +56,15 @@ class autopilot:
     def update(self, cmd, state):
 
         # lateral autopilot
-        phi_c =
-        delta_a =
-        delta_r =
+        phi_c = self.course_from_roll.update(cmd.course_command, state.chi)
+        delta_a = self.roll_from_aileron.update(phi_c, state.phi, state.p)
+        delta_r = self.sideslip_from_rudder.update(0, state.beta)
 
         # longitudinal autopilot
-        h_c =
-        theta_c =
-        delta_e =
-        delta_t =
+        h_c = cmd.altitude_command
+        theta_c = self.altitude_from_pitch.update(h_c, state.h)
+        delta_e = self.pitch_from_elevator.update(theta_c, state.theta, state.q)
+        delta_t = self.airspeed_from_throttle.update(cmd.airspeed_command, state.Va)
 
         # construct output and commanded states
         delta = np.array([[delta_e], [delta_a], [delta_r], [delta_t]])
