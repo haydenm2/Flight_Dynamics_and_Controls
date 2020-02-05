@@ -39,7 +39,7 @@ yaw_damper_tau_r = 0.01
 yaw_damper_kp = 0.01
 
 #----------pitch loop------------- (UAV book pg. 105)
-wn_theta = 10.0
+wn_theta = 15.0
 zeta_theta = 0.707
 
 a_t_1 = -MAV.rho*Va0**2*MAV.c*MAV.S_wing/(2.*MAV.Jy)*MAV.C_m_q*MAV.c/(2.0*Va0)
@@ -50,7 +50,7 @@ pitch_kd = (2.*zeta_theta*wn_theta - a_t_1)/a_t_3
 K_theta_DC = pitch_kp*a_t_3/(a_t_2 + pitch_kp*a_t_3)
 
 #----------altitude loop------------- (UAV book pg. 107)
-W_h_theta = 10.0
+W_h_theta = 50.0
 wn_h = wn_theta/W_h_theta
 zeta_h = 0.707
 
@@ -59,7 +59,7 @@ altitude_ki = wn_h**2/(K_theta_DC*Va0)
 # altitude_zone =
 
 #---------airspeed hold using throttle--------------- (UAV book pg. 109)
-wn_v = 10.0
+wn_v = 20.0
 zeta_v = 0.707
 
 delta_t_star = 0.78144714

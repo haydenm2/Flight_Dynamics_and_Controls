@@ -37,6 +37,10 @@ class pid_control:
         u = self.kp*error + self.ki*self.integrator - self.kd*self.differentiator
         u_sat = self._saturate(u)
 
+        # integrator anti-windup
+        if not self.ki == 0:
+            self.integrator += self.Ts/self.ki*(u_sat-u)
+
         # age data
         self.error_delay_1 = error
         return u_sat
@@ -53,6 +57,10 @@ class pid_control:
         self.integrator += self.Ts / 2 * (self.error_delay_1 + error)
         u = self.kp * error + self.ki * self.integrator - self.kd * ydot
         u_sat = self._saturate(u)
+
+        # integrator anti-windup
+        if not self.ki == 0:
+            self.integrator += self.Ts / self.ki * (u_sat - u)
 
         # age data
         self.error_delay_1 = error
@@ -83,6 +91,10 @@ class pi_control:
         self.integrator += self.Ts / 2 * (self.error_delay_1 + error)
         u = self.kp * error + self.ki * self.integrator
         u_sat = self._saturate(u)
+
+        # integrator anti-windup
+        if not self.ki == 0:
+            self.integrator += self.Ts / self.ki * (u_sat - u)
 
         # age data
         self.error_delay_1 = error
