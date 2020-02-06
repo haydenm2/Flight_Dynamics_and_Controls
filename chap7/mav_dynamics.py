@@ -282,8 +282,6 @@ class mav_dynamics:
         delta_e = delta.item(1)
         delta_r = delta.item(2)
         delta_t = delta.item(3)
-        if delta_t < 0:
-            delta_t = 0.0
 
         # drag coefficients
         C_D_q = MAV.C_D_q
@@ -317,6 +315,8 @@ class mav_dynamics:
         
         # Propeller Thrust Calculations
         # map delta throttle command (0 to 1) into motor input voltage
+        if delta_t < 0:
+            delta_t = 0.0
         V_in = MAV.V_max*delta_t
 
         # Quadratic formula to solve for motor speed
