@@ -56,7 +56,8 @@ class autopilot:
     def update(self, cmd, state):
 
         # lateral autopilot
-        phi_c = self.course_from_roll.update(cmd.course_command, state.chi)
+        chi_c = wrap(cmd.course_command, state.chi)
+        phi_c = self.course_from_roll.update(chi_c, state.chi)
         delta_a = self.roll_from_aileron.update(phi_c, state.phi, state.p)
         delta_r = self.sideslip_from_rudder.update(0, state.beta)
 

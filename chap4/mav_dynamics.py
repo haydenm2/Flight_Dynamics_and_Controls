@@ -207,6 +207,8 @@ class mav_dynamics:
         delta_e = delta.item(1)
         delta_r = delta.item(2)
         delta_t = delta.item(3)
+        if delta_t < 0:
+            delta_t = 0.0
 
         # drag coefficients
         C_D_q = MAV.C_D_q
@@ -304,7 +306,7 @@ class mav_dynamics:
         self.msg_true_state.psi = psi
         self.msg_true_state.Vg = np.sqrt(self.Vg.item(0)**2 + self.Vg.item(1)**2 + self.Vg.item(2)**2)
         self.msg_true_state.gamma = np.arctan2(-self.Vg[2], np.sqrt(self.Vg[0]**2 + self.Vg[1]**2))
-        self.msg_true_state.chi = np.arctan2(self.Vg[1], self.Vg[0])
+        self.msg_true_state.chi = np.arctan2(self.Vg[1], self.Vg[0])[0]
         self.msg_true_state.p = self._state.item(10)
         self.msg_true_state.q = self._state.item(11)
         self.msg_true_state.r = self._state.item(12)
