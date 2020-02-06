@@ -14,11 +14,13 @@ from chap3.data_viewer import data_viewer
 from chap4.wind_simulation import wind_simulation
 from chap6.autopilot import autopilot
 from chap7.mav_dynamics import mav_dynamics
+from chap7.sensor_viewer import sensor_viewer
 from tools.signals import signals
 
 # initialize the visualization
 mav_view = mav_viewer()  # initialize the mav viewer
 data_view = data_viewer()  # initialize view of data plots
+sensor_view = sensor_viewer()  # initialize view of sensor data plots
 
 # initialize elements of the architecture
 wind = wind_simulation(SIM.ts_simulation)
@@ -58,6 +60,8 @@ while sim_time < SIM.end_time:
     data_view.update(mav.msg_true_state, # true states
                      estimated_state, # estimated states
                      commanded_state, # commanded states
+                     SIM.ts_simulation)
+    sensor_view.update(mav.sensors,  # sensor states
                      SIM.ts_simulation)
 
     #-------increment time-------------

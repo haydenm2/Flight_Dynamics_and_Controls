@@ -121,19 +121,19 @@ class mav_dynamics:
         we = self.msg_true_state.we
 
         # noise terms
-        n_accel_x = np.random.normal(0, SENSOR.accel_sigma)
-        n_accel_y = np.random.normal(0, SENSOR.accel_sigma)
-        n_accel_z = np.random.normal(0, SENSOR.accel_sigma)
-        n_gyro_x = np.random.normal(0, SENSOR.gyro_sigma)
-        n_gyro_y = np.random.normal(0, SENSOR.gyro_sigma)
-        n_gyro_z = np.random.normal(0, SENSOR.gyro_sigma)
-        n_abs_press = np.random.normal(0, SENSOR.static_pres_sigma)
-        n_diff_press = np.random.normal(0, SENSOR.diff_pres_sigma)
-        n_gps_n = np.random.normal(0, SENSOR.gps_n_sigma)
-        n_gps_e = np.random.normal(0, SENSOR.gps_e_sigma)
-        n_gps_h = np.random.normal(0, SENSOR.gps_h_sigma)
-        n_gps_course = np.random.normal(0, SENSOR.gps_course_sigma)
-        n_gps_Vg = np.random.normal(0, SENSOR.gps_Vg_sigma)
+        n_accel_x = np.random.randn()*SENSOR.accel_sigma
+        n_accel_y = np.random.randn()*SENSOR.accel_sigma
+        n_accel_z = np.random.randn()*SENSOR.accel_sigma
+        n_gyro_x = np.random.randn()*SENSOR.gyro_sigma
+        n_gyro_y = np.random.randn()*SENSOR.gyro_sigma
+        n_gyro_z = np.random.randn()*SENSOR.gyro_sigma
+        n_abs_press = np.random.randn()*SENSOR.static_pres_sigma
+        n_diff_press = np.random.randn()*SENSOR.diff_pres_sigma
+        n_gps_n = np.random.randn()*SENSOR.gps_n_sigma
+        n_gps_e = np.random.randn()*SENSOR.gps_e_sigma
+        n_gps_h = np.random.randn()*SENSOR.gps_h_sigma
+        n_gps_course = np.random.randn()*SENSOR.gps_course_sigma
+        n_gps_Vg = np.random.randn()*SENSOR.gps_Vg_sigma
 
 
         # ---------GYROS-----------
