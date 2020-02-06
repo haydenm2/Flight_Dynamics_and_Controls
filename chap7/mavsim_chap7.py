@@ -17,14 +17,8 @@ from chap7.mav_dynamics import mav_dynamics
 from tools.signals import signals
 
 # initialize the visualization
-VIDEO = False  # True==write video, False==don't write video
 mav_view = mav_viewer()  # initialize the mav viewer
 data_view = data_viewer()  # initialize view of data plots
-if VIDEO == True:
-    from chap2.video_writer import video_writer
-    video = video_writer(video_name="chap7_video.avi",
-                         bounding_box=(0, 0, 1000, 1000),
-                         output_rate=SIM.ts_video)
 
 # initialize elements of the architecture
 wind = wind_simulation(SIM.ts_simulation)
@@ -51,7 +45,7 @@ while sim_time < SIM.end_time:
     commands.altitude_command = h_command.square(sim_time)
 
     #-------controller-------------
-    estimated_state = mav.true_state  # uses true states in the control
+    estimated_state = mav.msg_true_state  # uses true states in the control
     delta, commanded_state = ctrl.update(commands, estimated_state)
 
     #-------physical system-------------
@@ -60,17 +54,14 @@ while sim_time < SIM.end_time:
     mav.update_sensors()  # update the sensors
 
     #-------update viewer-------------
-    mav_view.update(mav.true_state)  # plot body of MAV
-    data_view.update(mav.true_state, # true states
+    mav_view.update(mav.msg_true_state)  # plot body of MAV
+    data_view.update(mav.msg_true_state, # true states
                      estimated_state, # estimated states
                      commanded_state, # commanded states
                      SIM.ts_simulation)
-    if VIDEO == True: video.update(sim_time)
 
     #-------increment time-------------
     sim_time += SIM.ts_simulation
-
-if VIDEO == True: video.close()
 
 
 
