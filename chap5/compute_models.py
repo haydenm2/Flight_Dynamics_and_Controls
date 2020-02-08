@@ -290,33 +290,87 @@ def quaternion_state(x_euler):
                             [x_euler[11][0]]])  # (12)
     return x_quat
 
+
+def finite_diff(f1, f2, dx):
+    partial = (f2-f1)/(2.0*dx)
+    return partial
+
+def dxe_dxq(xq, dq=0.0001):
+    e = xq[6:10]
+    dxe_dxq_ = np.eye(12, 13)
+    phi = lambda e: np.arctan2(2 * (e.item(0) * e.item(1) + e.item(2) * e.item(3)), (e.item(0) ** 2 + e.item(3) ** 2 - e.item(1) ** 2 - e.item(2) ** 2))
+    theta = lambda e: np.arcsin(2 * (e.item(0) * e.item(2) - e.item(1) * e.item(3)))
+    psi = lambda e: np.arctan2(2 * (e.item(0) * e.item(3) + e.item(1) * e.item(2)), (e.item(0) ** 2 + e.item(1) ** 2 - e.item(2) ** 2 - e.item(3) ** 2))
+    E = np.array([phi, theta, psi])
+    for i in range(6, 9):
+        for j in range(6, 10):
+            dxe_dxq_[i, j] = finite_diff(E[i-6](e-dq*np.eye(4)[j-6]), E[i-6](e+dq*np.eye(4)[j-6]), dq)
+    return dxe_dxq_
+
+def f_quat(mav, x_quat, input):
+    # return 13x1 dynamics (as if state were Quaternion state)
+    # compute f at quaternion_state
+    old_state = mav._state
+    mav._state = x_quat
+    mav._update_velocity_data()
+    forces_moments_ = mav._forces_moments(input)
+    f_quat_ = mav._derivatives(x_quat, forces_moments_)
+
+    # revert to original state
+    mav._state = old_state
+    mav._update_velocity_data()
+    return f_quat_
+
 def f_euler(mav, x_euler, input):
-    # return 12x1 dynamics (as f state were Euler state)
-    # compute f at euler_state
-    # TODO
-    f_euler_ = np.zeros((12, 1))
+    # return 12x1 dynamics (as f state were Quaternion state)
+    # compute f at quaternion_state
+    x_quat_ = quaternion_state(x_euler)
+    f_quat_ = f_quat(mav, x_quat_, input)
+    dxe_dxq_ = dxe_dxq(x_quat_)
+    f_euler_ = dxe_dxq_ @ f_quat_
     return f_euler_
 
-def df_dx(mav, x_euler, input):
-    # take partial of f_euler with respect to
-    # TODO
-    A = np.zeros((12, 12))
+def df_dx(mav, x_quat_, input):
+    # take partial of f_quat with respect to x_quat
+    dx = 0.0001
+    f = lambda x: f_quat(mav, x, input)
+    A = np.zeros((13, 13))
+    for j in range(13):
+        A[:, j] = finite_diff(f(x_quat_-dx*np.eye(13)[j].reshape(-1, 1)), f(x_quat_+dx*np.eye(13)[j].reshape(-1, 1)), dx).flatten()
     return A
 
-def df_du(mav, x_euler, delta):
-    # take partial of f_euler with respect to delta
-    # TODO
-    B = np.zeros((12, 4))
+def df_du(mav, x_quat_, delta):
+    # take partial of f_quat with respect to delta
+    dx = 0.0001
+    f = lambda d: f_quat(mav, x_quat_, d)
+    B = np.zeros((13, 4))
+    for j in range(4):
+        B[:, j] = finite_diff(f(delta - dx * np.eye(4)[j].reshape(-1, 1)), f(delta + dx * np.eye(4)[j].reshape(-1, 1)), dx).flatten()
     return B
 
 def dT_dVa(mav, Va, delta_t):
     # returns the derivative of motor thrust with respect to Va
-    # TODO
-    dThrust = 0
+    dx = 0.0001
+    Va_old = mav._Va
+    mav._Va = Va - dx
+    mav._forces_moments(np.array([0.0, 0.0, 0.0, delta_t]))
+    f_low = mav.thrust
+    mav._Va = Va + dx
+    mav._forces_moments(np.array([0.0, 0.0, 0.0, delta_t]))
+    f_up = mav.thrust
+    dThrust = finite_diff(f_low, f_up, dx)
+    mav._Va = Va_old
     return dThrust
 
 def dT_ddelta_t(mav, Va, delta_t):
     # returns the derivative of motor thrust with respect to delta_t
-    # TODO
-    dThrust = 0
+    dx = 0.0001
+    Va_old = mav._Va
+    mav._Va = Va
+    mav._forces_moments(np.array([0.0, 0.0, 0.0, delta_t-dx]))
+    f_low = mav.thrust
+    mav._forces_moments(np.array([0.0, 0.0, 0.0, delta_t+dx]))
+    f_up = mav.thrust
+    dThrust = finite_diff(f_low, f_up, dx)
+    mav._Va = Va_old
     return dThrust
