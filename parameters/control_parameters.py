@@ -37,8 +37,8 @@ sideslip_ki = -wn_beta**2/a_b_2
 sideslip_kp = -(2.*zeta_beta*wn_beta - a_b_1)/a_b_2
 
 #----------yaw damper------------- (UAV book pg. ??) #TODO implement this correctly
-yaw_damper_tau_r = 0.01
-yaw_damper_kp = 0.01
+yaw_damper_tau_r = 0.05
+yaw_damper_kp = 0.5
 
 #----------pitch loop------------- (UAV book pg. 105)
 wn_theta = 15.0

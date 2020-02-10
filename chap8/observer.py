@@ -10,8 +10,9 @@ sys.path.append('..')
 import parameters.control_parameters as CTRL
 import parameters.simulation_parameters as SIM
 import parameters.sensor_parameters as SENSOR
-from tools.rotations import Euler2Rotation
+from tools.tools import RotationVehicle2Body
 from tools.wrap import wrap
+import parameters.aerosonde_parameters as MAV
 
 from message_types.msg_state import msg_state
 
@@ -37,13 +38,13 @@ class observer:
     def update(self, measurements):
 
         # estimates for p, q, r are low pass filter of gyro minus bias estimate
-        self.estimated_state.p =
-        self.estimated_state.q =
-        self.estimated_state.r =
+        self.estimated_state.p = self.lpf_gyro_x.update(measurements.gyro_x)
+        self.estimated_state.q = self.lpf_gyro_y.update(measurements.gyro_y)
+        self.estimated_state.r = self.lpf_gyro_z.update(measurements.gyro_z)
 
         # invert sensor model to get altitude and airspeed
-        self.estimated_state.h =
-        self.estimated_state.Va =
+        self.estimated_state.h = self.lpf_static.update(measurements.static_pressure)/(MAV.rho*MAV.gravity)
+        self.estimated_state.Va = np.sqrt(2.0/MAV.rho*self.lpf_diff.update(measurements.diff_pressure))
 
         # estimate phi and theta with simple ekf
         self.attitude_ekf.update(self.estimated_state, measurements)
@@ -67,7 +68,7 @@ class alpha_filter:
         self.y = y0  # initial condition
 
     def update(self, u):
-        self.y =
+        self.y = self.alpha*self.y + (1-self.alpha)*u
         return self.y
 
 class ekf_attitude:
@@ -164,7 +165,7 @@ class ekf_position:
         return _h
 
     def h_pseudo(self, x, state):
-        # measurement model for wind triangale pseudo measurement
+        # measurement model for wind triangle pseudo measurement
         _h =
         return _h
 
