@@ -8,7 +8,7 @@ import sys
 sys.path.append('..')
 import numpy as np
 from scipy.optimize import minimize
-from tools.tools import Euler2Quaternion, Qu aternion2Euler
+from tools.tools import Euler2Quaternion, Quaternion2Euler
 from tools.transfer_function import transfer_function
 import parameters.aerosonde_parameters as MAV
 from parameters.simulation_parameters import ts_simulation as Ts
@@ -247,12 +247,14 @@ def compute_ss_model(mav, trim_state, trim_input, display=False, euler=False):
         B_maj = df_du(mav, trim_state, trim_input)
         lat_row_ind = [[4], [10], [12], [6], [7], [9]]
         lat_col_ind = [4, 10, 12, 6, 7, 9]
+        latB_col_ind = [0, 2]
         lon_row_ind = [[3], [5], [11], [8], [2]]
         lon_col_ind = [3, 5, 11, 8, 2]
+        lonB_col_ind = [1, 3]
         A_lat = A_maj[lat_row_ind, lat_col_ind]
         A_lon = A_maj[lon_row_ind, lon_col_ind]
-        B_lat = B_maj[lat_col_ind, :]
-        B_lon = B_maj[lon_col_ind, :]
+        B_lat = B_maj[lat_row_ind, latB_col_ind]
+        B_lon = B_maj[lon_row_ind, lonB_col_ind]
         A_lon[4] = -A_lon[4]
         B_lon[4] = -B_lon[4]
 
