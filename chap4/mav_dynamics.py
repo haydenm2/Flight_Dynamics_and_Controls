@@ -252,7 +252,7 @@ class mav_dynamics:
         # add thrust and torque due to propeller
         n = Omega_op / (2.0 * np.pi)
         f_p = np.array([[MAV.rho * n**2 * MAV.D_prop**4 * C_T], [0], [0]])
-        m_p = np.array([[MAV.rho * n**2 * MAV.D_prop**5 * C_Q], [0], [0]])
+        m_p = np.array([[-MAV.rho * n**2 * MAV.D_prop**5 * C_Q], [0], [0]])
 
         # # Alternative Simplified Thrust model
         # f_p = (0.5*MAV.rho*MAV.S_prop*MAV.C_prop) * np.array([[(MAV.k_motor*delta_t)**2 - self.msg_true_state.Va**2], [0], [0]])  # prop thrust

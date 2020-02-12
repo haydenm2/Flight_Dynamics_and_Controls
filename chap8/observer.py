@@ -13,6 +13,7 @@ import parameters.sensor_parameters as SENSOR
 from tools.tools import RotationVehicle2Body
 from tools.wrap import wrap
 import parameters.aerosonde_parameters as MAV
+from chap5.compute_models import f_quat
 
 from message_types.msg_state import msg_state
 
@@ -38,9 +39,9 @@ class observer:
     def update(self, measurements):
 
         # estimates for p, q, r are low pass filter of gyro minus bias estimate
-        self.estimated_state.p = self.lpf_gyro_x.update(measurements.gyro_x)
-        self.estimated_state.q = self.lpf_gyro_y.update(measurements.gyro_y)
-        self.estimated_state.r = self.lpf_gyro_z.update(measurements.gyro_z)
+        self.estimated_state.p = self.lpf_gyro_x.update(measurements.gyro_x) - SENSOR.gyro_x_bias
+        self.estimated_state.q = self.lpf_gyro_y.update(measurements.gyro_y) - SENSOR.gyro_y_bias
+        self.estimated_state.r = self.lpf_gyro_z.update(measurements.gyro_z) - SENSOR.gyro_z_bias
 
         # invert sensor model to get altitude and airspeed
         self.estimated_state.h = self.lpf_static.update(measurements.static_pressure)/(MAV.rho*MAV.gravity)
@@ -68,18 +69,18 @@ class alpha_filter:
         self.y = y0  # initial condition
 
     def update(self, u):
-        self.y = self.alpha*self.y + (1-self.alpha)*u
+        self.y = self.alpha*self.y + (1.0-self.alpha)*u
         return self.y
 
 class ekf_attitude:
     # implement continous-discrete EKF to estimate roll and pitch angles
     def __init__(self):
-        self.Q =
-        self.Q_gyro =
-        self.R_accel =
-        self.N =   # number of prediction step per sample
-        self.xhat =  # initial state: phi, theta
-        self.P =
+        self.Q = 1e-30 * np.eye(2)
+        self.Q_gyro = np.eye(3)*SENSOR.gyro_sigma**2
+        self.R_accel = np.eye(3)*SENSOR.accel_sigma**2
+        self.N = 3  # number of prediction step per sample
+        self.xhat = np.array([[MAV.phi0], [MAV.theta0]]) # initial state: phi, theta
+        self.P = np.eye(2)
         self.Ts = SIM.ts_control/self.N
 
     def update(self, state, measurement):
@@ -89,31 +90,50 @@ class ekf_attitude:
         state.theta = self.xhat.item(1)
 
     def f(self, x, state):
-        # system dynamics for propagation model: xdot = f(x, u)
-        _f =
+        # system dynamics for propagation model: xdot = f(x, u) (pg. 156)
+        phi = x.item(0)
+        theta = x.item(1)
+        _f = np.array([[state.p + state.q*np.sin(phi)*np.tan(theta) + state.r*np.cos(phi)*np.tan(theta)],
+                       [state.q*np.cos(phi) - state.r*np.sin(phi)]])
+        _f += np.array([[0.0],
+                        [0.0]])
         return _f
 
     def h(self, x, state):
-        # measurement model y
-        _h =
+        # measurement model y (pg. 157)
+        p = state.p
+        q = state.q
+        r = state.r
+        Va = state.Va
+        phi = x.item(0)
+        theta = x.item(1)
+        _h =np.array([[q*Va*np.sin(theta) + MAV.gravity*np.sin(theta)],
+                      [r*Va*np.cos(theta) - p*Va*np.sin(theta) - MAV.gravity*np.cos(theta)*np.sin(phi)],
+                      [-q*Va*np.cos(theta) - MAV.gravity*np.cos(theta)*np.cos(phi)]])
+        _h += np.array([[0.0],
+                        [0.0],
+                        [0.0]])  # noise terms
         return _h
 
     def propagate_model(self, state):
         # model propagation
+        phi = state.item(0)
+        theta = state.item(1)
         for i in range(0, self.N):
              # propagate model
-            self.xhat =
+            self.xhat += self.Ts * self.f(self.xhat, state)
             # compute Jacobian
             A = jacobian(self.f, self.xhat, state)
             # compute G matrix for gyro noise
-            G =
+            G = np.array([[1.0, np.sin(phi)*np.tan(theta), np.cos(phi)*np.tan(theta)],
+                       [0.0, np.cos(phi), -np.sin(phi)]])
             # update P with continuous time model
             # self.P = self.P + self.Ts * (A @ self.P + self.P @ A.T + self.Q + G @ self.Q_gyro @ G.T)
             # convert to discrete time models
-            A_d =
-            G_d =
+            A_d = np.eye(2) + A*self.Ts + A @ A * self.Ts**2/2.0
+            G_d = 0  #TODO
             # update P with discrete time model
-            self.P =
+            self.P += self.Ts*(A_d @ self.P + self.P @ A_d.T + self.Q) # + G_d @ self.Q_gyro @ G_d.T)
 
     def measurement_update(self, state, measurement):
         # measurement updates
@@ -131,12 +151,12 @@ class ekf_attitude:
 class ekf_position:
     # implement continous-discrete EKF to estimate pn, pe, chi, Vg
     def __init__(self):
-        self.Q =
-        self.R =
-        self.N =   # number of prediction step per sample
+        self.Q = 1e-30 * np.eye(7)
+        self.R = np.diag([SENSOR.gps_n_sigma**2, SENSOR.gps_e_sigma**2, SENSOR.gps_course_sigma**2, SENSOR.gps_Vg_sigma**2])
+        self.N = 3  # number of prediction step per sample
         self.Ts = (SIM.ts_control / self.N)
-        self.xhat =
-        self.P =
+        self.xhat = np.array([[MAV.pn0], [MAV.pe0], [MAV.psi0], [MAV.Va0]])
+        self.P = 1e-30 * np.eye(7)
         self.gps_n_old = 9999
         self.gps_e_old = 9999
         self.gps_Vg_old = 9999

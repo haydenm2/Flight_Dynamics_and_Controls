@@ -21,8 +21,8 @@ def compute_tf_model(mav, trim_state, trim_input, display=False):
 
 
     # control surface inputs
-    delta_e_star = trim_input[1]
-    delta_t_star = trim_input[3]
+    delta_e_star = trim_input[1, 0]
+    delta_t_star = trim_input[3, 0]
 
     # additional mav variables
     Va = mav._Va
@@ -76,9 +76,16 @@ def compute_tf_model(mav, trim_state, trim_input, display=False):
                                Ts=Ts)
 
     # Va to delta_t
-    a_v_1 = rho*Va_star*S/mass*(MAV.C_D_0 + MAV.C_D_alpha*alpha_star + MAV.C_D_delta_e*delta_e_star) + rho*MAV.S_prop/mass*MAV.C_prop*Va_star
-    a_v_2 = rho*MAV.S_prop/mass*MAV.C_prop*MAV.k_motor**2*delta_t_star
-    a_v_3 = g
+
+    # book approach (non-finite difference)
+    # a_v_1 = rho*Va_star*S/mass*(MAV.C_D_0 + MAV.C_D_alpha*alpha_star + MAV.C_D_delta_e*delta_e_star) + rho*MAV.S_prop/mass*MAV.C_prop*Va_star
+    # a_v_2 = rho*MAV.S_prop/mass*MAV.C_prop*MAV.k_motor**2*delta_t_star
+    # a_v_3 = g
+
+    # finite difference approach
+    a_v_1 = rho*Va_star*S/mass*(MAV.C_D_0 + MAV.C_D_alpha*alpha_star + MAV.C_D_delta_e*delta_e_star) - 1.0/mass*dT_dVa(mav, Va, delta_t_star)
+    a_v_2 = 1.0/mass*dT_ddelta_t(mav, Va, delta_t_star)
+    a_v_3 = g * np.cos(theta - alpha_star)
     T_Va_delta_t = transfer_function(num=np.array([[a_v_2]]),
                                      den=np.array([[1, a_v_1]]),
                                      Ts=Ts)
