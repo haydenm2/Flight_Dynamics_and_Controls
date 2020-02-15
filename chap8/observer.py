@@ -193,10 +193,10 @@ class ekf_position:
         _f = np.array([[Vg*np.cos(chi)],
                        [Vg*np.sin(chi)],
                        [((Va*np.cos(psi)+wn)*(-Va*psi_dot*np.sin(psi))+(Va*np.sin(psi)+we)*(Va*psi_dot*np.cos(psi)))/Vg],
-                       [MAV.gravity/Vg*np.tan(phi)],  #TODO
+                       [MAV.gravity/Vg*np.tan(phi)],
                        [0.0],
                        [0.0],
-                       [psi_dot]])  #TODO
+                       [psi_dot]])
         return _f
 
     def h_gps(self, x, state):

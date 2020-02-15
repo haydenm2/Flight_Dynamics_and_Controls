@@ -36,7 +36,7 @@ a_b_2 = MAV.rho*Va0*MAV.S_wing/(2*MAV.mass)*MAV.C_Y_delta_r
 sideslip_ki = -wn_beta**2/a_b_2
 sideslip_kp = -(2.*zeta_beta*wn_beta - a_b_1)/a_b_2
 
-#----------yaw damper------------- (UAV book pg. ??) #TODO implement this correctly
+#----------yaw damper------------- (UAV book pg. ??)
 yaw_damper_tau_r = 0.05
 yaw_damper_kp = 0.5
 
