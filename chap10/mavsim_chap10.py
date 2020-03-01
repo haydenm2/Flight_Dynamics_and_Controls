@@ -18,7 +18,6 @@ from chap10.path_follower import path_follower
 from chap10.path_viewer import path_viewer
 
 # initialize the visualization
-VIDEO = False  # True==write video, False==don't write video
 path_view = path_viewer()  # initialize the viewer
 data_view = data_viewer()  # initialize view of data plots
 
@@ -62,11 +61,7 @@ while sim_time < SIM.end_time:
 
     #-------physical system-------------
     current_wind = wind.update()  # get the new wind vector
-    try:
-        mav.update_state(delta, current_wind)  # propagate the MAV dynamics
-    except:
-        test = 1
-    mav.update_sensors()  # update the sensors
+    mav.update_state(delta, current_wind)  # propagate the MAV dynamics
 
     #-------update viewer-------------
     path_view.update(path, mav.msg_true_state)  # plot path and MAV

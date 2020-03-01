@@ -99,6 +99,9 @@ class mav_dynamics:
 
         # update the message class for the true state
         self._update_msg_true_state()
+
+        # update the sensor states
+        self.update_sensors()
         
     def update_sensors(self):
         "Return value of sensors on MAV: gyros, accels, static_pressure, dynamic_pressure, GPS"

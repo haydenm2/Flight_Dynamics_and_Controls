@@ -54,7 +54,6 @@ while sim_time < SIM.end_time:
     #-------physical system-------------
     current_wind = wind.update()  # get the new wind vector
     mav.update_state(delta, current_wind)  # propagate the MAV dynamics
-    mav.update_sensors()  # update the sensors
 
     #-------update viewer-------------
     mav_view.update(mav.msg_true_state)  # plot body of MAV

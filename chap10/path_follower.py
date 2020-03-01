@@ -53,9 +53,9 @@ class path_follower:
             (Va ** 2 - (wn * np.sin(chi) - we * np.cos(chi)) ** 2 - wd ** 2) / (Va ** 2 - wd ** 2)))
 
     def _follow_orbit(self, path, state):
-        psi = np.arctan2(state.pe - path.orbit_center.item(1), state.pn - path.orbit_center.item(0))
+        vpsi = np.arctan2(state.pe - path.orbit_center.item(1), state.pn - path.orbit_center.item(0))
         p_i = np.array([[state.pn], [state.pe], [-state.h]])
-        d = np.linalg.norm(np.abs(p_i) - np.abs(path.orbit_center))
+        d = np.linalg.norm(p_i - path.orbit_center)
         if path.orbit_direction == 'CW':
             lbda = 1
         else:
@@ -70,7 +70,7 @@ class path_follower:
         R = rho
 
         self.autopilot_commands.airspeed_command = path.airspeed
-        self.autopilot_commands.course_command = psi + lbda*(np.pi/2.0 + np.arctan2(self.k_orbit*(d-rho), rho))
+        self.autopilot_commands.course_command = vpsi + lbda*(np.pi/2.0 + np.arctan2(self.k_orbit*(d-rho), rho))
         self.autopilot_commands.altitude_command = -path.orbit_center.item(2)
         self.autopilot_commands.phi_feedforward = lbda*np.arctan2(((wn*np.cos(chi) + we*np.sin(chi)) + np.sqrt(Va**2 - (wn*np.sin(chi) - we*np.cos(chi))**2 - wd**2))**2, g*R*np.sqrt((Va**2 - (wn*np.sin(chi) - we*np.cos(chi))**2 - wd**2)/(Va**2 - wd**2)))
 
