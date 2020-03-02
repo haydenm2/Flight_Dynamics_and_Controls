@@ -45,56 +45,60 @@ class path_manager:
         return self.path
 
     def line_manager(self, waypoints, state):
-        if waypoints.flag_waypoints_changed:
-            self.initialize_pointers()
         p = np.array([[state.pn], [state.pe], [-state.h]])
         w_prev = waypoints.ned[:, self.ptr_previous].reshape(-1, 1)
         w_curr = waypoints.ned[:, self.ptr_current].reshape(-1, 1)
         w_next = waypoints.ned[:, self.ptr_next].reshape(-1, 1)
-        self.halfspace_r = w_prev
-        q_im = (w_curr - w_prev)/np.linalg.norm((w_curr - w_prev))
-        q_i = (w_next - w_curr)/np.linalg.norm((w_next - w_curr))
-        self.halfspace_n = ((q_im + q_i)/np.linalg.norm((q_im + q_i)))
+        q_prev = (w_curr - w_prev)/np.linalg.norm((w_curr - w_prev))
+        q_curr = (w_next - w_curr)/np.linalg.norm((w_next - w_curr))
+        self.halfspace_r = w_curr
+        self.halfspace_n = ((q_prev + q_curr)/np.linalg.norm((q_prev + q_curr)))
+        if self.init == True:
+            self.init = False
+            self.path.flag_path_changed = True
         if self.inHalfSpace(p):
             if self.ptr_current <= (self.num_waypoints - 1):
                 self.increment_pointers()
-
-        w_prev = waypoints.ned[:, self.ptr_previous].reshape(-1, 1)
-        w_curr = waypoints.ned[:, self.ptr_current].reshape(-1, 1)
-        q_im = (w_curr - w_prev) / np.linalg.norm((w_curr - w_prev))
-        self.path.flag = 'line'
+            self.init = True
         self.path.line_origin = w_prev  # r in book
-        self.path.line_direction = q_im  # q in book
+        self.path.line_direction = q_prev  # q in book
 
     def fillet_manager(self, waypoints, radius, state):
-        if waypoints.flag_waypoints_changed:
-            self.initialize_pointers()
         p = np.array([[state.pn], [state.pe], [-state.h]])
         w_prev = waypoints.ned[:, self.ptr_previous].reshape(-1, 1)
         w_curr = waypoints.ned[:, self.ptr_current].reshape(-1, 1)
         w_next = waypoints.ned[:, self.ptr_next].reshape(-1, 1)
-        q_im = (w_curr - w_prev) / np.linalg.norm((w_curr - w_prev))
-        q_i = (w_next - w_curr) / np.linalg.norm((w_next - w_curr))
-        g = np.arccos(-q_im.T @ q_i)
+        q_prev = (w_curr - w_prev) / np.linalg.norm((w_curr - w_prev))
+        q_curr = (w_next - w_curr) / np.linalg.norm((w_next - w_curr))
+        g = np.arccos(-q_prev.T @ q_curr)
         if self.manager_state == 1:
             self.path.flag = 'line'  # 1 in book
             self.path.line_origin = w_prev  # r in book
-            self.path.line_direction = q_im  # q in book
-            self.halfspace_r = waypoints.ned[:, self.ptr_current].reshape(-1, 1) + (radius/(np.sin(g/2.0)))*q_i  # z in book
-            self.halfspace_n = q_im
+            self.path.line_direction = q_prev  # q in book
+            self.halfspace_r = w_curr - (radius/(np.tan(g/2.0)))*q_prev  # z in book
+            self.halfspace_n = q_prev
+            if self.init == True:
+                self.init = False
+                self.path.flag_path_changed = True
             if self.inHalfSpace(p):
                 self.manager_state = 2
+                self.init = True
         elif self.manager_state == 2:
             self.path.flag = 'orbit'  # 2 in book
-            self.path.orbit_center = waypoints.ned[:, self.ptr_current].reshape(-1, 1) + (radius/np.tan(g/2.0)) @ (q_im - q_i)/np.linalg.norm(q_im - q_i)  # c in book
+            self.path.orbit_center = w_curr - (radius/np.sin(g/2.0)).item(0) * (q_prev - q_curr)/np.linalg.norm(q_prev - q_curr)  # c in book
             self.path.orbit_radius = radius  # rho in book
-            self.path.orbit_direction = self.OrbitDirType(np.sign(q_im.item(0)*q_i.item(1) - q_im.item(1)*q_i.item(0)))  # lambda in book
-            self.halfspace_r = waypoints.ned[:, self.ptr_current].reshape(-1, 1) - (radius/(np.sin(g/2.0)))*q_im  # z in book
-            self.halfspace_n = q_i
+            self.path.orbit_direction = self.OrbitDirType(np.sign(q_prev.item(0)*q_curr.item(1) - q_prev.item(1)*q_curr.item(0)))  # lambda in book
+            self.halfspace_r = w_curr + (radius/(np.tan(g/2.0)))*q_curr  # z in book
+            self.halfspace_n = q_curr
+            if self.init == True:
+                self.init = False
+                self.path.flag_path_changed = True
             if self.inHalfSpace(p):
+                self.init = True
                 if self.ptr_current <= (self.num_waypoints - 1):
                     self.increment_pointers()
                     self.manager_state = 1
+
 
     def dubins_manager(self, waypoints, radius, state):
         p = np.array([[state.pn], [state.pe], [-state.h]])
@@ -162,11 +166,6 @@ class path_manager:
                 self.init = True
                 if self.ptr_current <= (self.num_waypoints - 1):
                     self.increment_pointers()
-                # w_prev = waypoints.ned[:, self.ptr_previous].reshape(-1, 1)
-                # chi_prev = waypoints.course[0, self.ptr_previous]
-                # w_curr = waypoints.ned[:, self.ptr_current].reshape(-1, 1)
-                # chi_curr = waypoints.course[0, self.ptr_current]
-                # self.dubins_path.update(w_prev, chi_prev, w_curr, chi_curr, radius)
 
     def initialize_pointers(self):
         self.ptr_previous = 0
