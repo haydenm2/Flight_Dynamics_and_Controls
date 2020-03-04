@@ -21,14 +21,8 @@ from chap12.world_viewer import world_viewer
 from chap12.path_planner import path_planner
 
 # initialize the visualization
-VIDEO = False  # True==write video, False==don't write video
 world_view = world_viewer()  # initialize the viewer
 data_view = data_viewer()  # initialize view of data plots
-if VIDEO == True:
-    from chap2.video_writer import video_writer
-    video = video_writer(video_name="chap12_video.avi",
-                         bounding_box=(0, 0, 1000, 1000),
-                         output_rate=SIM.ts_video)
 
 # initialize elements of the architecture
 wind = wind_simulation(SIM.ts_simulation)
@@ -50,7 +44,7 @@ sim_time = SIM.start_time
 print("Press Command-Q to exit...")
 while sim_time < SIM.end_time:
     #-------observer-------------
-    measurements = mav.sensors()  # get sensor measurements
+    measurements = mav.sensors  # get sensor measurements
     estimated_state = obsv.update(measurements)  # estimate states from measurements
 
     # -------path planner - ----
@@ -71,17 +65,14 @@ while sim_time < SIM.end_time:
     mav.update_state(delta, current_wind)  # propagate the MAV dynamics
 
     #-------update viewer-------------
-    world_view.update(map, waypoints, path, mav.true_state)  # plot path and MAV
-    data_view.update(mav.true_state, # true states
+    world_view.update(map, waypoints, path, mav.msg_true_state)  # plot path and MAV
+    data_view.update(mav.msg_true_state, # true states
                      estimated_state, # estimated states
                      commanded_state, # commanded states
                      SIM.ts_simulation)
-    if VIDEO == True: video.update(sim_time)
 
     #-------increment time-------------
     sim_time += SIM.ts_simulation
-
-if VIDEO == True: video.close()
 
 
 

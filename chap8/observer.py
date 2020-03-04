@@ -76,7 +76,7 @@ class alpha_filter:
 class ekf_attitude:
     # implement continous-discrete EKF to estimate roll and pitch angles
     def __init__(self):
-        self.Q = 1e-50 * np.eye(2)                          # model propogation covariance
+        self.Q = 1e-9 * np.eye(2)                          # model propogation covariance
         self.Q_gyro = np.eye(3)*SENSOR.gyro_sigma**2        # measurement covariance gyro
         self.R_accel = np.eye(3)*SENSOR.accel_sigma**2      # measurement covariance accel
         self.N = 5                                          # number of prediction step per sample
@@ -130,9 +130,8 @@ class ekf_attitude:
             # self.P = self.P + self.Ts * (A @ self.P + self.P @ A.T + self.Q + G @ self.Q_gyro @ G.T)
             # convert to discrete time models
             A_d = np.eye(2) + A*self.Ts + A @ A * self.Ts**2/2.0
-            G_d = G*self.Ts
             # update P with discrete time model
-            self.P = A_d @ self.P @ A_d.T + self.Ts**2 * self.Q + G_d @ self.Q_gyro @ G_d.T
+            self.P = A_d @ self.P @ A_d.T + self.Ts**2 * (self.Q + G @ self.Q_gyro @ G.T)
 
     def measurement_update(self, state, measurement):
         # measurement updates (pg. 145-146 supplement)
