@@ -12,7 +12,7 @@ import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 import pyqtgraph.Vector as Vector
 
-from tools.rotations import Euler2Rotation
+from tools.tools import RotationVehicle2Body as Euler2Rotation
 from chap11.dubins_parameters import dubins_parameters
 
 class world_viewer():
@@ -158,19 +158,19 @@ class world_viewer():
         blue = np.array([0., 0., 1., 1])
         yellow = np.array([1., 1., 0., 1])
         meshColors = np.empty((13, 3, 4), dtype=np.float32)
-        meshColors[0] = yellow  # nose-top
-        meshColors[1] = yellow  # nose-right
-        meshColors[2] = yellow  # nose-bottom
-        meshColors[3] = yellow  # nose-left
-        meshColors[4] = blue  # fuselage-left
-        meshColors[5] = blue  # fuselage-top
-        meshColors[6] = blue  # fuselage-right
-        meshColors[7] = red  # fuselage-bottom
-        meshColors[8] = green  # wing
-        meshColors[9] = green  # wing
-        meshColors[10] = green  # horizontal tail
-        meshColors[11] = green  # horizontal tail
-        meshColors[12] = blue  # vertical tail
+        meshColors[0] = yellow  # nose 1
+        meshColors[1] = yellow  # nose 2
+        meshColors[2] = yellow  # nose 3
+        meshColors[3] = yellow  # nose 4
+        meshColors[4] = blue  # body 1
+        meshColors[5] = blue  # body 2
+        meshColors[6] = blue  # body 3
+        meshColors[7] = blue  # body 4
+        meshColors[8] = red  # wing 1
+        meshColors[9] = red  # wing 2
+        meshColors[10] = green  # tailwing 1
+        meshColors[11] = green  # tailwing 2
+        meshColors[12] = red  # rudder
         return points, meshColors
 
     def points_to_mesh(self, points):
@@ -198,9 +198,9 @@ class world_viewer():
 
     def drawPath(self, path):
         red = np.array([[1., 0., 0., 1]])
-        if path.type == 'line':
+        if path.flag == 'line':
             points = self.straight_line_points(path)
-        elif path.type == 'orbit':
+        elif path.flag == 'orbit':
             points = self.orbit_points(path)
         if not self.plot_initialized:
             path_color = np.tile(red, (points.shape[0], 1))
@@ -209,7 +209,7 @@ class world_viewer():
                                           width=2,
                                           antialias=True,
                                           mode='line_strip')
-                                          #mode='line_strip')
+            # mode='line_strip')
             self.window.addItem(self.path)
         else:
             self.path.setData(pos=points)
@@ -227,10 +227,10 @@ class world_viewer():
         return points
 
     def orbit_points(self, path):
-        N = 10
+        N = 20
         theta = 0
         theta_list = [theta]
-        while theta < 2*np.pi:
+        while theta < 2 * np.pi:
             theta += 0.1
             theta_list.append(theta)
         points = np.array([[path.orbit_center.item(0) + path.orbit_radius,
@@ -248,10 +248,10 @@ class world_viewer():
 
     def drawWaypoints(self, waypoints, radius):
         blue = np.array([[0., 0., 1., 1.]])
-        blue = np.array([[30, 144, 255, 255]])/255.
-        if waypoints.type=='straight_line' or waypoints.type=='fillet':
+        blue = np.array([[30, 144, 255, 255]]) / 255.
+        if waypoints.type == 'straight_line' or waypoints.type == 'fillet':
             points = self.straight_waypoint_points(waypoints)
-        elif waypoints.type=='dubins':
+        elif waypoints.type == 'dubins':
             points = self.dubins_points(waypoints, radius, 0.1)
         if not self.plot_initialized:
             waypoint_color = np.tile(blue, (points.shape[0], 1))
@@ -271,17 +271,17 @@ class world_viewer():
 
     def dubins_points(self, waypoints, radius, Del):
         initialize_points = True
-        for j in range(0, waypoints.num_waypoints-1):
+        for j in range(0, waypoints.num_waypoints - 1):
             self.dubins_path.update(
-                waypoints.ned[:, j],
+                waypoints.ned[:, j:j + 1],
                 waypoints.course.item(j),
-                waypoints.ned[:, j+1],
-                waypoints.course.item(j+1),
+                waypoints.ned[:, j + 1:j + 2],
+                waypoints.course.item(j + 1),
                 radius)
 
             # points along start circle
             th1 = np.arctan2(self.dubins_path.p_s.item(1) - self.dubins_path.center_s.item(1),
-                            self.dubins_path.p_s.item(0) - self.dubins_path.center_s.item(0))
+                             self.dubins_path.p_s.item(0) - self.dubins_path.center_s.item(0))
             th1 = mod(th1)
             th2 = np.arctan2(self.dubins_path.r1.item(1) - self.dubins_path.center_s.item(1),
                              self.dubins_path.r1.item(0) - self.dubins_path.center_s.item(0))
@@ -290,7 +290,7 @@ class world_viewer():
             theta_list = [th]
             if self.dubins_path.dir_s > 0:
                 if th1 >= th2:
-                    while th < th2 + 2*np.pi:
+                    while th < th2 + 2 * np.pi:
                         th += Del
                         theta_list.append(th)
                 else:
@@ -299,7 +299,7 @@ class world_viewer():
                         theta_list.append(th)
             else:
                 if th1 <= th2:
-                    while th > th2 - 2*np.pi:
+                    while th > th2 - 2 * np.pi:
                         th -= Del
                         theta_list.append(th)
                 else:

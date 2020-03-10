@@ -14,6 +14,7 @@ from tools.tools import RotationVehicle2Body
 from tools.wrap import wrap
 import parameters.aerosonde_parameters as MAV
 from chap5.compute_models import f_quat
+from scipy import stats
 
 from message_types.msg_state import msg_state
 
@@ -255,7 +256,9 @@ class ekf_position:
             C = jacobian(self.h_gps, self.xhat, state)
             y = np.array([measurement.gps_n, measurement.gps_e, measurement.gps_Vg, measurement.gps_course]).reshape(-1, 1)
             y[3, 0] = wrap(y[3, 0], h[3, 0])
-            # for i in range(0, 4):
+            # S_inv = np.linalg.inv(self.R + C @ self.P @ C.T)
+            # if stats.chi2.sf((y-h).T @ S_inv @ (y-h), df=3) > 0.01:
+            #     # for i in range(0, 4):
             Ci = C[:, 0:4]
             L = self.P[0:4, 0:4] @ Ci.T @ np.linalg.inv(self.R + Ci @ self.P[0:4, 0:4] @ Ci.T)
             self.P[0:4, 0:4] = (np.eye(4) - L @ Ci) @ self.P[0:4, 0:4] @ (np.eye(4) - L @ Ci).T + L @ self.R @ L.T
