@@ -5,12 +5,12 @@ from message_types.msg_waypoints import msg_waypoints
 class planRRT():
     def __init__(self):
         self.waypoints = msg_waypoints()
-        self.segmentLength = 300 # standard length of path segments
+        self.segmentLength = 200 # standard length of path segments
 
     def planPath(self, wpp_start, wpp_end, map):
 
         # desired down position is down position of end node
-        pd = wpp_end.item(2)
+        pd = -100 #wpp_end.item(2)
 
         # specify start and end nodes from wpp_start and wpp_end
         # format: N, E, D, cost, parentIndex, connectsToGoalFlag,
@@ -32,7 +32,7 @@ class planRRT():
         # find path with minimum cost to end_node
         path = self.findMinimumPath(tree, end_node)
         waypoints_smoothed = self.smoothPath(path, map)
-        self.waypoints.ned = waypoints_smoothed[:, :3].T
+        self.waypoints.ned = np.hstack((waypoints_smoothed[:, :3].T, waypoints_smoothed[-1, :3].reshape(-1, 1)))
         # self.waypoints.ned = np.hstack((waypoints_smoothed[:, :3].T, np.array([[np.inf], [np.inf], [np.inf]])))
         self.waypoints.airspeed = np.ones(len(waypoints_smoothed)) * 25.0
         self.waypoints.num_waypoints = len(waypoints_smoothed)
