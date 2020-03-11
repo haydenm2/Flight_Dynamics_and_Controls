@@ -2,15 +2,16 @@ import numpy as np
 from message_types.msg_waypoints import msg_waypoints
 
 
-class planRRT():
+class planRRTDubins():
     def __init__(self):
         self.waypoints = msg_waypoints()
         self.segmentLength = 200 # standard length of path segments
+        self.waypoints.type = 'dubins'
 
     def planPath(self, wpp_start, wpp_end, map):
 
         # desired down position is down position of end node
-        pd = -100 #wpp_end.item(2)
+        pd = wpp_end.item(2)
 
         # specify start and end nodes from wpp_start and wpp_end
         # format: N, E, D, cost, parentIndex, connectsToGoalFlag,
@@ -34,6 +35,9 @@ class planRRT():
         waypoints_smoothed = self.smoothPath(path, map)
         self.waypoints.ned = np.hstack((waypoints_smoothed[:, :3].T, waypoints_smoothed[-1, :3].reshape(-1, 1)))
         self.waypoints.airspeed = np.ones(len(waypoints_smoothed)) * 25.0
+        self.waypoints.course[0, 0] = 0.0
+        for j in range(len(waypoints_smoothed) - 1):
+            self.waypoints.course[0, j+1] = np.arctan2((self.waypoints.ned[1, j+1] - self.waypoints.ned[1, j]),(self.waypoints.ned[0, j+1] - self.waypoints.ned[0, j]))
         self.waypoints.num_waypoints = len(waypoints_smoothed)
         return self.waypoints
 
@@ -75,11 +79,11 @@ class planRRT():
         valid_addition = False
         while not valid_addition:
             p = self.generateRandomNode(map, pd, 0)
-            n_dist = (p.item(0) - tree[:, 0])**2 + (p.item(1) - tree[:, 1])**2 + (p.item(2) - tree[:, 2])**2
+            n_dist = (p.item(0) - tree[:, 0]) ** 2 + (p.item(1) - tree[:, 1]) ** 2 + (p.item(2) - tree[:, 2]) ** 2
             parent = np.argmin(n_dist)
             n_closest = tree[parent, :3]
-            q = (p - n_closest)/np.linalg.norm(p - n_closest)
-            v_star = n_closest + q*segmentLength
+            q = (p - n_closest) / np.linalg.norm(p - n_closest)
+            v_star = n_closest + q * segmentLength
             if self.collision(n_closest, v_star, map):
                 continue
             else:
@@ -110,11 +114,15 @@ class planRRT():
         w_s = np.array([path[0, :]])
         i = 0
         j = 1
+        k = 0
         while j < len(path)-1:
             if self.collision(path[i, :], path[j+1, :], map):
                 w_s = np.vstack([w_s, path[j, :]])
+                k += 1
+                self.waypoints.course[0, k] = np.arctan2((w_s[k, 1] - w_s[k-1, 1]),(w_s[k, 0] - w_s[k-1, 0]))
                 i = j
             j += 1
+        self.waypoints.course[0, 0] = self.waypoints.course[0, 1]
         w_s = np.vstack([w_s, path[-1, :]])
         return w_s
 

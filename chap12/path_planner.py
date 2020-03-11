@@ -9,12 +9,14 @@ import sys
 sys.path.append('..')
 from message_types.msg_waypoints import msg_waypoints
 from chap12.planRRT import planRRT
+from chap12.planRRTDubins import planRRTDubins
 
 class path_planner:
     def __init__(self):
         # waypoints definition
         self.waypoints = msg_waypoints()
         self.rrt = planRRT()
+        self.rrt_dubins = planRRTDubins()
 
     def update(self, map, state):
         # this flag is set for one time step to signal a redraw in the viewer
@@ -73,8 +75,32 @@ class path_planner:
             self.waypoints.ned = waypoints.ned
             self.waypoints.airspeed = waypoints.airspeed
             self.waypoints.num_waypoints = waypoints.num_waypoints
-        # elif planner_flag == 4:
+        elif planner_flag == 4:
+            self.waypoints.type = 'dubins'
+            self.waypoints.num_waypoints = 0
+            Va = 25
+            # current configuration vector format: N, E, D, Va
+            wpp_start = np.array([state.pn,
+                                  state.pe,
+                                  -state.h,
+                                  state.Va])
+            if np.linalg.norm(np.array([state.pn, state.pe, -state.h]) - np.array(
+                    [map.city_width, map.city_width, -state.h])) == 0:
+                wpp_end = np.array([0,
+                                    0,
+                                    -state.h,
+                                    Va])
+            else:
+                wpp_end = np.array([map.city_width,
+                                    map.city_width,
+                                    -state.h,
+                                    Va])
 
+            waypoints = self.rrt_dubins.planPath(wpp_start, wpp_end, map)
+            self.waypoints.ned = waypoints.ned
+            self.waypoints.airspeed = waypoints.airspeed
+            self.waypoints.num_waypoints = waypoints.num_waypoints
+            self.waypoints.course = waypoints.course
         else:
             print("Error in Path Planner: Undefined planner type.")
 

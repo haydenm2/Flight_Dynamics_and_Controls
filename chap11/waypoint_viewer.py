@@ -57,8 +57,8 @@ class waypoint_viewer():
                 self.drawPath(path)
 
         # update the center of the camera view to the mav location
-        #view_location = Vector(state.pe, state.pn, state.h)  # defined in ENU coordinates
-        #self.window.opts['center'] = view_location
+        view_location = Vector(state.pe, state.pn, state.h)  # defined in ENU coordinates
+        self.window.opts['center'] = view_location
         # redraw
         self.app.processEvents()
 
