@@ -136,18 +136,13 @@ class ekf_attitude:
 
     def measurement_update(self, state, measurement):
         # measurement updates (pg. 145-146 supplement)
-        gate = False
-        threshold = 2.0
         h = self.h(self.xhat, state)
         C = jacobian(self.h, self.xhat, state)
         y = np.array([measurement.accel_x, measurement.accel_y, measurement.accel_z]).reshape(-1, 1)
-        for i in range(0, 3):
-            if np.abs(y[i]-h[i, 0]) > threshold:
-                gate = True
-        if not gate:
-            Ci = C[i]
-            L = self.P @ Ci.T @ np.linalg.inv(self.R_accel + Ci @ self.P @ Ci.T)
-            self.P = (np.eye(1) - L @ Ci) @ self.P @ (np.eye(2) - L @ Ci).T + L @ self.R_accel @ L.T
+        S_inv = np.linalg.inv(self.R_accel + C @ self.P @ C.T)
+        if stats.chi2.sf((y-h).T @ S_inv @ (y-h), df=3) > 0.01:
+            L = self.P @ C.T @ S_inv
+            self.P = (np.eye(2) - L @ C) @ self.P @ (np.eye(2) - L @ C).T + L @ self.R_accel @ L.T
             self.xhat += L @ (y - h)
 
 class ekf_position:
@@ -240,7 +235,6 @@ class ekf_position:
         h = self.h_pseudo(self.xhat, state)
         C = jacobian(self.h_pseudo, self.xhat, state)
         y = np.array([0, 0]).reshape(-1, 1)
-        # for i in range(0, 2):
         Ci = C[:, 4:6]
         L = self.P[4:6, 4:6] @ Ci.T @ np.linalg.inv(self.R_p + Ci @ self.P[4:6, 4:6] @ Ci.T)
         self.P[4:6, 4:6] = (np.eye(2) - L @ Ci) @ self.P[4:6, 4:6] @ (np.eye(2) - L @ Ci).T + L @ self.R_p @ L.T
@@ -256,9 +250,7 @@ class ekf_position:
             C = jacobian(self.h_gps, self.xhat, state)
             y = np.array([measurement.gps_n, measurement.gps_e, measurement.gps_Vg, measurement.gps_course]).reshape(-1, 1)
             y[3, 0] = wrap(y[3, 0], h[3, 0])
-            # S_inv = np.linalg.inv(self.R + C @ self.P @ C.T)
-            # if stats.chi2.sf((y-h).T @ S_inv @ (y-h), df=3) > 0.01:
-            #     # for i in range(0, 4):
+
             Ci = C[:, 0:4]
             L = self.P[0:4, 0:4] @ Ci.T @ np.linalg.inv(self.R + Ci @ self.P[0:4, 0:4] @ Ci.T)
             self.P[0:4, 0:4] = (np.eye(4) - L @ Ci) @ self.P[0:4, 0:4] @ (np.eye(4) - L @ Ci).T + L @ self.R @ L.T
