@@ -152,7 +152,7 @@ class planRRTDubins():
         j = 1
         k = 0
         while j < len(path)-1:
-            chi_s = self.tree_courses[i]
+            chi_s = self.tree_courses[int(path[i, 3])]
             chi_e = np.arctan2((path[j+1, 1] - path[i, 1]), (path[j+1, 0] - path[i, 0]))
             self.dubins_path.update(path[i, 0:3].reshape(3, 1), chi_s, path[j+1, 0:3].reshape(3, 1), chi_e, self.dubins_path.radius)
             if self.collision(path[i, :], path[j+1, :], map):
