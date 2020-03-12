@@ -18,12 +18,12 @@ class path_planner:
         self.rrt = planRRT()
         self.rrt_dubins = planRRTDubins()
 
-    def update(self, map, state):
+    def update(self, map, state, R):
         # this flag is set for one time step to signal a redraw in the viewer
         # planner_flag = 1  # return simple waypoint path
         # planner_flag = 2  # return dubins waypoint path
-        planner_flag = 3  # plan path through city using straight-line RRT
-        # planner_flag = 4  # plan path through city using dubins RRT
+        # planner_flag = 3  # plan path through city using straight-line RRT
+        planner_flag = 4  # plan path through city using dubins RRT
         if planner_flag == 1:
             self.waypoints.type = 'fillet'
             self.waypoints.num_waypoints = 4
@@ -96,7 +96,7 @@ class path_planner:
                                     -state.h,
                                     Va])
 
-            waypoints = self.rrt_dubins.planPath(wpp_start, wpp_end, map)
+            waypoints = self.rrt_dubins.planPath(wpp_start, wpp_end, map, R)
             self.waypoints.ned = waypoints.ned
             self.waypoints.airspeed = waypoints.airspeed
             self.waypoints.num_waypoints = waypoints.num_waypoints

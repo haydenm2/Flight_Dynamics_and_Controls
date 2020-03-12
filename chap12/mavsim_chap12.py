@@ -49,7 +49,7 @@ while sim_time < SIM.end_time:
 
     # -------path planner - ----
     if path_manage.flag_need_new_waypoints == 1:
-        waypoints = path_plan.update(map, estimated_state)
+        waypoints = path_plan.update(map, estimated_state, PLAN.R_min)
         path_manage.flag_need_new_waypoints = 0
 
     #-------path manager-------------
