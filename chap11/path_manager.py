@@ -107,7 +107,7 @@ class path_manager:
         w_curr = waypoints.ned[:, self.ptr_current].reshape(-1, 1)
         chi_curr = waypoints.course.item(self.ptr_current)
         self.dubins_path.update(w_prev, chi_prev, w_curr, chi_curr, radius)
-        if self.manager_state == 1:
+        if self.manager_state == 1:  # first half of start orbit
             self.path.flag = 'orbit'
             self.path.orbit_center = self.dubins_path.center_s  # c=c_s in book
             self.path.orbit_radius = self.dubins_path.radius  # rho=R in book
@@ -120,7 +120,7 @@ class path_manager:
             if self.inHalfSpace(p):
                 self.manager_state = 2
                 self.init = True
-        elif self.manager_state == 2:
+        elif self.manager_state == 2:  # second half of start orbit
             self.halfspace_r = self.dubins_path.r1  # z1 in book
             self.halfspace_n = self.dubins_path.n1  # q1 in book
             if self.init == True:
@@ -130,7 +130,7 @@ class path_manager:
                 self.path.flag_path_changed = True
                 self.manager_state = 3
                 self.init = True
-        elif self.manager_state == 3:
+        elif self.manager_state == 3:  # straight line follow segment
             self.path.flag = 'line'
             self.path.line_origin = self.dubins_path.r1 # r=z1 in book
             self.path.line_direction = self.dubins_path.n1 # q=q1 in book
@@ -142,7 +142,7 @@ class path_manager:
             if self.inHalfSpace(p):
                 self.manager_state = 4
                 self.init = True
-        elif self.manager_state == 4:
+        elif self.manager_state == 4:  # first half of end orbit
             self.path.flag = 'orbit'
             self.path.orbit_center = self.dubins_path.center_e # c=c_e in book
             self.path.orbit_radius = self.dubins_path.radius  # rho=R in book
@@ -155,7 +155,7 @@ class path_manager:
             if self.inHalfSpace(p):
                 self.manager_state = 5
                 self.init = True
-        elif self.manager_state == 5:
+        elif self.manager_state == 5:  # second half of end orbit
             self.halfspace_r = self.dubins_path.r3 # z3 in book
             self.halfspace_n = self.dubins_path.n3 # q3 in book
             if self.init == True:
@@ -166,6 +166,11 @@ class path_manager:
                 self.init = True
                 if self.ptr_current <= (self.num_waypoints - 1):
                     self.increment_pointers()
+                    w_prev = waypoints.ned[:, self.ptr_previous].reshape(-1, 1)
+                    chi_prev = waypoints.course.item(self.ptr_previous)
+                    w_curr = waypoints.ned[:, self.ptr_current].reshape(-1, 1)
+                    chi_curr = waypoints.course.item(self.ptr_current)
+                    self.dubins_path.update(w_prev, chi_prev, w_curr, chi_curr, radius)
 
     def initialize_pointers(self):
         self.ptr_previous = 0

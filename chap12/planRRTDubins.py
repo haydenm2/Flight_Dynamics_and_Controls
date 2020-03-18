@@ -39,7 +39,7 @@ class planRRTDubins():
         # find path with minimum cost to end_node
         path = self.findMinimumPath(tree, end_node)
         waypoints_smoothed = self.smoothPath(path, map)
-        self.waypoints.ned = np.hstack((waypoints_smoothed[:, :3].T, waypoints_smoothed[0, :3].reshape(-1, 1)))
+        self.waypoints.ned = waypoints_smoothed[:, :3].T
         self.waypoints.airspeed = np.ones(len(waypoints_smoothed)) * 25.0
         self.waypoints.course[0, 0] = 0.0
         for j in range(len(waypoints_smoothed) - 1):

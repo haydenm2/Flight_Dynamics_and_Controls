@@ -42,10 +42,12 @@ class dubins_parameters:
             theta = np.arctan2((cre - crs).item(1), (cre - crs).item(0))
             L1 = np.linalg.norm(crs - cre) + R*mod(2.0*np.pi + mod(theta - np.pi/2.0) - mod(chis - np.pi/2.0)) + R*mod(2.0*np.pi + mod(chie - np.pi/2.0) - mod(theta - np.pi/2.0))
 
+            ell = np.linalg.norm(cle - crs)
             theta = np.arctan2((cle - crs).item(1), (cle - crs).item(0))
             theta2 = theta - np.pi/2.0 + np.arcsin(2.0*R/ell)
             L2 = np.sqrt(ell**2 - 4.0*R**2) + R*mod(2.0*np.pi + mod(theta2) - mod(chis - np.pi/2.0)) + R*mod(2.0*np.pi + mod(theta2 + np.pi) - mod(chie + np.pi/2.0))
 
+            ell = np.linalg.norm(cre - cls)
             theta = np.arctan2((cre - cls).item(1), (cre - cls).item(0))
             theta2 = np.arccos(2.0*R/ell)
             L3 = np.sqrt(ell**2 - 4.0*R**2) + R*mod(2.0*np.pi + mod(chis + np.pi/2.0) - mod(theta + theta2)) + R*mod(2.0*np.pi + mod(chie - np.pi/2.0) - mod(theta + theta2 - np.pi))
@@ -62,7 +64,7 @@ class dubins_parameters:
                 self.center_s = crs
                 self.dir_s = 1
                 self.center_e = cre
-                self.dir_e = -1
+                self.dir_e = 1
                 self.n1 = (self.center_e-self.center_s)/np.linalg.norm(self.center_e-self.center_s) # denoted as q1 in the supplement
                 self.r1 = self.center_s + R*rotz(-np.pi/2.0) @ self.n1 # denoted as z1 in the supplement
                 self.r2 = self.center_e + R*rotz(-np.pi/2.0) @ self.n1 # denoted as z2 in the supplement

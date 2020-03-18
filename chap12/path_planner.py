@@ -97,9 +97,9 @@ class path_planner:
                                     Va])
 
             waypoints = self.rrt_dubins.planPath(wpp_start, wpp_end, map, R)
-            self.waypoints.ned = waypoints.ned
-            self.waypoints.airspeed = waypoints.airspeed
             self.waypoints.num_waypoints = waypoints.num_waypoints
+            self.waypoints.ned[:, 0:self.waypoints.num_waypoints] = waypoints.ned
+            self.waypoints.airspeed[0, 0:self.waypoints.num_waypoints] = waypoints.airspeed
             self.waypoints.course = waypoints.course
         else:
             print("Error in Path Planner: Undefined planner type.")

@@ -87,7 +87,7 @@ class ekf_attitude:
 
     def update(self, state, measurement):
         self.propagate_model(state)
-        # self.measurement_update(state, measurement)
+        self.measurement_update(state, measurement)
         state.phi = self.xhat.item(0)
         state.theta = self.xhat.item(1)
 
@@ -140,7 +140,7 @@ class ekf_attitude:
         C = jacobian(self.h, self.xhat, state)
         y = np.array([measurement.accel_x, measurement.accel_y, measurement.accel_z]).reshape(-1, 1)
         S_inv = np.linalg.inv(self.R_accel + C @ self.P @ C.T)
-        if stats.chi2.sf((y-h).T @ S_inv @ (y-h), df=3) > 0.01:
+        if stats.chi2.sf((y-h).T @ S_inv @ (y-h), df=3) < 0.01:
             L = self.P @ C.T @ S_inv
             self.P = (np.eye(2) - L @ C) @ self.P @ (np.eye(2) - L @ C).T + L @ self.R_accel @ L.T
             self.xhat += L @ (y - h)
