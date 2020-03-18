@@ -10,7 +10,7 @@ class planRRT():
     def planPath(self, wpp_start, wpp_end, map):
 
         # desired down position is down position of end node
-        pd = -100 #wpp_end.item(2)
+        pd = wpp_end.item(2)
 
         # specify start and end nodes from wpp_start and wpp_end
         # format: N, E, D, cost, parentIndex, connectsToGoalFlag,

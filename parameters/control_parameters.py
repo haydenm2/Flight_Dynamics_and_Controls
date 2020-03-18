@@ -41,7 +41,7 @@ yaw_damper_tau_r = 0.05
 yaw_damper_kp = 0.5
 
 #----------pitch loop------------- (UAV book pg. 105)
-wn_theta = 25.0
+wn_theta = 15.0
 zeta_theta = 1.707
 
 a_t_1 = -MAV.rho*Va0**2*MAV.c*MAV.S_wing/(2.*MAV.Jy)*MAV.C_m_q*MAV.c/(2.0*Va0)
