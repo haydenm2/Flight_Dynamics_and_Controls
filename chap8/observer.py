@@ -77,10 +77,10 @@ class alpha_filter:
 class ekf_attitude:
     # implement continous-discrete EKF to estimate roll and pitch angles
     def __init__(self):
-        self.Q = 1e-9 * np.eye(2)                          # model propogation covariance
+        self.Q = 1e-50 * np.eye(2)                          # model propogation covariance
         self.Q_gyro = np.eye(3)*SENSOR.gyro_sigma**2        # measurement covariance gyro
         self.R_accel = np.eye(3)*SENSOR.accel_sigma**2      # measurement covariance accel
-        self.N = 5                                          # number of prediction step per sample
+        self.N = 4                                          # number of prediction step per sample
         self.xhat = np.array([[MAV.phi0], [MAV.theta0]])    # initial state: phi, theta
         self.P = np.eye(2) #*0.1                            # initial state covariance
         self.Ts = SIM.ts_control/self.N                     # sample rate
@@ -148,7 +148,7 @@ class ekf_attitude:
 class ekf_position:
     # implement continous-discrete EKF to estimate pn, pe, Vg, chi (pg. 150 supplement)
     def __init__(self):
-        self.Q = 1e-5 * np.eye(7)
+        self.Q = 1e-1 * np.eye(7)
         self.R = np.diag([SENSOR.gps_n_sigma**2, SENSOR.gps_e_sigma**2, SENSOR.gps_Vg_sigma**2, SENSOR.gps_course_sigma**2])
         self.R_p = np.eye(2)*0.01
         self.N = 5  # number of prediction step per sample
