@@ -60,7 +60,7 @@ print("Press Command-Q to exit...")
 while sim_time < SIM.end_time:
     #-------observer-------------
     measurements = mav.sensors  # get sensor measurements
-    estimated_state = obsv.update(measurements)  # estimate states from measurements
+    estimated_state = obsv.update(measurements, sim_time)  # estimate states from measurements
 
     #-------path manager-------------
     path = path_manage.update(waypoints, PLAN.R_min, estimated_state)

@@ -37,7 +37,7 @@ class observer:
         # ekf for pn, pe, Vg, chi, wn, we, psi
         self.position_ekf = ekf_position()
 
-    def update(self, measurements):
+    def update(self, measurements, sim_time):
 
         # estimates for p, q, r are low pass filter of gyro minus bias estimate
         self.estimated_state.p = self.lpf_gyro_x.update(measurements.gyro_x) - SENSOR.gyro_x_bias
@@ -50,7 +50,7 @@ class observer:
         if self.estimated_state.Va == 0:
             self.estimated_state.Va = 0.001
         # estimate phi and theta with simple ekf
-        self.attitude_ekf.update(self.estimated_state, measurements)
+        self.attitude_ekf.update(self.estimated_state, measurements, sim_time)
 
         # estimate pn, pe, Vg, chi, wn, we, psi
         self.position_ekf.update(self.estimated_state, measurements)
@@ -84,10 +84,12 @@ class ekf_attitude:
         self.xhat = np.array([[MAV.phi0], [MAV.theta0]])    # initial state: phi, theta
         self.P = np.eye(2) #*0.1                            # initial state covariance
         self.Ts = SIM.ts_control/self.N                     # sample rate
+        self.start_meas_time = np.inf  #time until measurement updates are started
 
-    def update(self, state, measurement):
+    def update(self, state, measurement, sim_time):
         self.propagate_model(state)
-        self.measurement_update(state, measurement)
+        if sim_time > self.start_meas_time:
+            self.measurement_update(state, measurement)
         state.phi = self.xhat.item(0)
         state.theta = self.xhat.item(1)
 

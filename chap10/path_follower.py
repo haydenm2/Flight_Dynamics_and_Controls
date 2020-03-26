@@ -48,9 +48,7 @@ class path_follower:
         self.autopilot_commands.airspeed_command = path.airspeed
         self.autopilot_commands.course_command = chi_q - self.chi_inf*2.0/np.pi*np.arctan(self.k_path*e_p.item(1))
         self.autopilot_commands.altitude_command = -r_i.item(2) - np.sqrt(s.item(0)**2 + s.item(1)**2)*(q.item(2)/np.sqrt(q.item(0)**2 + q.item(1)**2))
-        self.autopilot_commands.phi_feedforward = lbda * np.arctan2(((wn * np.cos(chi) + we * np.sin(chi)) + np.sqrt(
-            Va ** 2 - (wn * np.sin(chi) - we * np.cos(chi)) ** 2 - wd ** 2)) ** 2, g * R * np.sqrt(
-            (Va ** 2 - (wn * np.sin(chi) - we * np.cos(chi)) ** 2 - wd ** 2) / (Va ** 2 - wd ** 2)))
+        self.autopilot_commands.phi_feedforward = lbda*np.arctan2(((wn*np.cos(chi) + we*np.sin(chi)) + np.sqrt(Va**2 - (wn*np.sin(chi) - we*np.cos(chi))**2 - wd**2))**2, g*R*np.sqrt((Va**2 - (wn*np.sin(chi) - we*np.cos(chi))**2 - wd**2)/(Va**2 - wd**2)))
 
     def _follow_orbit(self, path, state):
         vpsi = np.arctan2(state.pe - path.orbit_center.item(1), state.pn - path.orbit_center.item(0))

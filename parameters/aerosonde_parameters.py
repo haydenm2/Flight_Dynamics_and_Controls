@@ -1,7 +1,7 @@
 import sys
 sys.path.append('..')
 import numpy as np
-from tools.tools import Euler2Quaternion
+from tools.tools import Euler2Quaternion, Quaternion2Euler
 
 ######################################################################################
                 #   Initial Conditions
@@ -168,3 +168,5 @@ x_trim = np.array( [[-2.98038726e-14],
  [ 0.00000000e+00],
  [ 0.00000000e+00],
  [ 0.00000000e+00]])
+
+[phi_star, theta_star, psi_star] = Quaternion2Euler(np.array([x_trim.item(6), x_trim.item(7), x_trim.item(8), x_trim.item(9)]))

@@ -52,6 +52,7 @@ class mav_dynamics:
         self._beta = 0
         # initialize true_state message
         self.msg_true_state = msg_state()
+        self._update_msg_true_state()
         
         # initialize the sensors message
         self.sensors = msg_sensors()
@@ -61,6 +62,7 @@ class mav_dynamics:
         self._gps_eta_h = 0.
         # timer so that gps only updates every ts_gps seconds
         self._t_gps = 999.  # large value ensures gps updates at initial time.
+        self.update_sensors()
 
 
     ###################################

@@ -48,7 +48,7 @@ while sim_time < SIM.end_time:
 
     #-------controller-------------
     measurements = mav.sensors  # get sensor measurements
-    estimated_state = obsv.update(measurements)  # estimate states from measurements
+    estimated_state = obsv.update(measurements, sim_time)  # estimate states from measurements
     delta, commanded_state = ctrl.update(commands, estimated_state)
     # delta, commanded_state = ctrl.update(commands, mav.msg_true_state)
 

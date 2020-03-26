@@ -1,8 +1,12 @@
 import sys
 sys.path.append('..')
 import numpy as np
-#import chap5.transfer_function_coef as TF
+from chap4.mav_dynamics import mav_dynamics
+from chap5.compute_models import compute_ss_model
+from chap5.trim import compute_trim
 import parameters.aerosonde_parameters as MAV
+import parameters.simulation_parameters as SIM
+from tools.tools import Euler2Quaternion
 
 gravity = MAV.gravity
 #sigma =
@@ -71,3 +75,40 @@ a_v_1 = MAV.rho*MAV.Va0*MAV.S_prop/MAV.mass*(MAV.C_D_0 + MAV.C_D_alpha*alpha_sta
 a_v_2 = MAV.rho*MAV.S_prop/MAV.mass*MAV.C_prop*MAV.k_motor**2*delta_t_star
 airspeed_throttle_kp = wn_v**2/a_v_2
 airspeed_throttle_ki = (2.*zeta_v*wn_v - a_v_1)/a_v_2
+
+# --------------------------------------------------------------------------
+# ------------------------ LQR PARAMETERS ----------------------------------
+# --------------------------------------------------------------------------
+mav = mav_dynamics(SIM.ts_simulation)
+Va = 25.
+gamma = 0.*np.pi/180.
+R = np.inf
+trim_state, trim_input = compute_trim(mav, Va, gamma, R)
+A_lon, B_lon, A_lat, B_lat = compute_ss_model(mav, trim_state, trim_input, euler=True)
+# Q = np.diag((1, 1, 1, 1, 1, 1))  # v, p, r, phi, chi, I
+# R = np.diag((1, 1))  # da, dr
+
+vmax = np.pi/3.
+pmax = 1.
+rmax = 1.
+phimax = np.pi/3.
+psimax = np.pi/3.
+psi_int_max = 5.
+
+Q = np.array([[1./vmax**2., 0., 0., 0., 0., 0.],
+                 [0., 1./pmax**2, 0., 0., 0., 0.],
+                 [0., 0., 1./rmax**2., 0., 0., 0.],
+                 [0., 0., 0., 1./phimax**2., 0., 0.],
+                 [0., 0., 0., 0., 1./psimax**2., 0.],
+                 [0., 0., 0., 0., 0., 1./psi_int_max**2.]])
+
+
+damax = np.radians(01.)
+drmax = np.radians(01.)
+R = np.array([[1./damax**2, 0.], [0., 1./drmax**2]])
+
+H = np.array([[0, 0, 0, 0, 1]])
+
+A_lqr = np.block([[A_lat, np.zeros((len(A_lat), 1))], [H, np.zeros((len(H), 1))]])  #v, p, r, phi, psi, I
+B_lqr = np.block([[B_lat], [np.zeros((len(H), len(B_lat[0])))]])
+limit_lqr = np.array([[np.radians(45.)], [np.radians(45.)]])
