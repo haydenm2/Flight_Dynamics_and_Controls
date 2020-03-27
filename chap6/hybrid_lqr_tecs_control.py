@@ -25,7 +25,9 @@ class lqr_control:
         self.e_I_prev = 0
 
     def update(self, x, e_I):
-        self.x_I += self.Ts/2*(e_I + self.e_I_prev)
+        # integrator anti-windup
+        if np.abs(e_I-self.e_I_prev)/self.Ts < 0.2:
+            self.x_I += self.Ts / 2 * (e_I + self.e_I_prev)
         self.e_I_prev = e_I
         xi = np.vstack([x, self.x_I])
         u = -self.K_lqr @ xi

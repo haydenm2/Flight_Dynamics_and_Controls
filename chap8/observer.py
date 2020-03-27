@@ -79,7 +79,7 @@ class ekf_attitude:
     def __init__(self):
         self.Q = 1e-50 * np.eye(2)                          # model propogation covariance
         self.Q_gyro = np.eye(3)*SENSOR.gyro_sigma**2        # measurement covariance gyro
-        self.R_accel = np.eye(3)*SENSOR.accel_sigma**2      # measurement covariance accel
+        self.R_accel = 100*np.eye(3)*SENSOR.accel_sigma**2 * np.diag([1.0,1.0, 100.0])      # measurement covariance accel
         self.N = 4                                          # number of prediction step per sample
         self.xhat = np.array([[MAV.phi0], [MAV.theta0]])    # initial state: phi, theta
         self.P = np.eye(2) #*0.1                            # initial state covariance
