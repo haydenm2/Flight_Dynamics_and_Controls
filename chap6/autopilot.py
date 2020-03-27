@@ -22,8 +22,7 @@ class autopilot:
         if self.lqr_tecs:
             self.lateral_control = lqr_control(AP.A_lqr, AP.B_lqr, AP.Q, AP.R, AP.limit_lqr, ts_control)
             # self.longitudinal_control = tecs_control(tecs.A, tecs.B, tecs.C, tecs.K, tecs.x, tecs.y, tecs.u, tecs.limit, tecs.Ki, ts_control)
-        else:
-            pass
+
         # instantiate lateral controllers
         self.roll_from_aileron = pd_control_with_rate(
                         kp=AP.roll_kp,
@@ -66,9 +65,26 @@ class autopilot:
         if self.lqr_tecs:
             # LQR lateral autopilot
             x_lat = np.array([[state.beta, state.p, state.r, state.phi, state.chi]]).T
-            chi_c = wrap(cmd.course_command, state.chi)
-            e_I = state.chi - chi_c
-            phi_c = 0  # TODO? N/A?
+            chi = state.chi
+            chi_c = cmd.course_command
+            while chi_c > np.pi:
+                # print("Correct positive")
+                chi_c = chi_c - 2 * np.pi
+            while chi_c <= -np.pi:
+                # print("Correct negative")
+                chi_c = chi_c + 2 * np.pi
+            # chi_c = wrap(cmd.course_command, state.chi)
+            e_I = chi - chi_c
+            while e_I > np.pi:
+                # print("Correct positive")
+                chi = e_I
+                e_I = np.pi - e_I
+            while e_I <= -np.pi:
+                # print("Correct negative")
+                chi = e_I
+                e_I = np.pi - e_I
+            phi_c = 0
+            x_lat[4, 0] = chi
             u_lateral = self.lateral_control.update(x_lat, e_I)
             delta_a = u_lateral.item(0)
             delta_r = u_lateral.item(1)

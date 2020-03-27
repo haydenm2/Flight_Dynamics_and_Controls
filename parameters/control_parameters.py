@@ -85,8 +85,10 @@ gamma = 0.*np.pi/180.
 R = np.inf
 trim_state, trim_input = compute_trim(mav, Va, gamma, R)
 A_lon, B_lon, A_lat, B_lat = compute_ss_model(mav, trim_state, trim_input, euler=True)
-Q = np.diag((1.0/9.0, 1.0, 1.0, 1.0, 1.0, 1.0/5.0))  # v, p, r, phi, psi, psi_int
-R = np.diag((30.0, 5.0))  # da, dr
+# big value implies more cost for variable, low means low cost
+Q = np.diag((1.0/9.0, 1.0/1.0, 1.0/1.0, 1.0/1.0, 1.0/1.0, 1.0/5.0))  # v, p, r, phi, psi, psi_int
+R = np.diag((30.0/1.0, 5.0/1.0))  # da, dr
+
 H = np.array([[0, 0, 0, 0, 1]])
 A_lqr = np.block([[A_lat, np.zeros((len(A_lat), 1))], [H, np.zeros((len(H), 1))]])
 B_lqr = np.block([[B_lat], [np.zeros((len(H), len(B_lat[0])))]])
