@@ -65,24 +65,9 @@ class autopilot:
         if self.lqr_tecs:
             # LQR lateral autopilot
             x_lat = np.array([[state.beta, state.p, state.r, state.phi, state.chi]]).T
-            chi = state.chi
             chi_c = cmd.course_command
-            while chi_c > np.pi:
-                # print("Correct positive")
-                chi_c = chi_c - 2 * np.pi
-            while chi_c <= -np.pi:
-                # print("Correct negative")
-                chi_c = chi_c + 2 * np.pi
-            # chi_c = wrap(cmd.course_command, state.chi)
+            chi = wrap(state.chi, cmd.course_command)
             e_I = chi - chi_c
-            while e_I > np.pi:
-                # print("Correct positive")
-                chi = e_I
-                e_I = np.pi - e_I
-            while e_I <= -np.pi:
-                # print("Correct negative")
-                chi = e_I
-                e_I = np.pi - e_I
             phi_c = 0
             x_lat[4, 0] = chi
             u_lateral = self.lateral_control.update(x_lat, e_I)
