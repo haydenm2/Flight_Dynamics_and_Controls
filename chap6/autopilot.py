@@ -11,6 +11,7 @@ import parameters.control_parameters as AP
 import parameters.aerosonde_parameters as MAV
 from tools.transfer_function import transfer_function
 from tools.wrap import wrap
+from tools.tools import RotationBody2Vehicle
 from chap6.pid_control import pid_control, pi_control, pd_control_with_rate
 from chap6.hybrid_lqr_tecs_control import lqr_control, tecs_control
 from message_types.msg_state import msg_state
@@ -21,7 +22,7 @@ class autopilot:
         self.lqr_tecs = True
         if self.lqr_tecs:
             self.lateral_control = lqr_control(AP.A_lqr, AP.B_lqr, AP.Q, AP.R, AP.limit_lqr, ts_control)
-            # self.longitudinal_control = tecs_control(tecs.A, tecs.B, tecs.C, tecs.K, tecs.x, tecs.y, tecs.u, tecs.limit, tecs.Ki, ts_control)
+            self.longitudinal_control = tecs_control(AP.K_tecs, AP.limit_tecs, ts_control, MAV)
 
         # instantiate lateral controllers
         self.roll_from_aileron = pd_control_with_rate(
@@ -60,32 +61,42 @@ class autopilot:
                         limit=1.0)
         # common
         self.commanded_state = msg_state()
+        self.delta = np.array([[MAV.delta_a_star, MAV.delta_e_star, MAV.delta_r_star, MAV.delta_t_star]])  #TODO: ensure start at equilibrium
 
     def update(self, cmd, state):
         if self.lqr_tecs:
-            # LQR lateral autopilot
-            x_lat = np.array([[state.beta, state.p, state.r, state.phi, state.chi]]).T
-            chi_c = cmd.course_command
-            chi = wrap(state.chi, cmd.course_command)
-            e_I = chi - chi_c
-            phi_c = 0
-            x_lat[4, 0] = chi
-            u_lateral = self.lateral_control.update(x_lat, e_I)
-            delta_a = u_lateral.item(0)
-            delta_r = u_lateral.item(1)
+            # # LQR lateral autopilot
+            # x_lat = np.array([[np.sin(state.beta)*state.Va, state.p, state.r, state.phi, state.chi]]).T # using beta as an estimate for v
+            # chi_c = cmd.course_command
+            # chi = wrap(state.chi, cmd.course_command)
+            # e_I = chi - chi_c
+            # phi_c = 0
+            # x_lat[4, 0] = chi
+            # u_lateral = self.lateral_control.update(x_lat, e_I)
+            # delta_a = u_lateral.item(0)
+            # delta_r = u_lateral.item(1)
 
-            # # longitudinal autopilot
+            # TECS longitudinal autopilot
+            T = self.calculate_thrust(state, self.delta)
+            D = self.calculate_drag(state, self.delta)
+            x_tecs = np.array([[state.h, state.Vg, state.theta, T, D]]).T
+            command = np.array([[cmd.altitude_command], [cmd.airspeed_command]])
+            u_longitudinal = self.longitudinal_control.update(x_tecs, command)
+            delta_e = u_longitudinal.item(0)
+            delta_t = u_longitudinal.item(1)
+            theta_c = MAV.alpha_star
+
+            # lateral autopilot
+            chi_c = wrap(cmd.course_command, state.chi)
+            phi_c = cmd.phi_feedforward + self.course_from_roll.update(chi_c, state.chi)
+            delta_a = self.roll_from_aileron.update(phi_c, state.phi, state.p)
+            delta_r = self.yaw_damper.update(state.r)
+
+            # # longitudinal autopilot (TEMPORARY FOR TESTING LATERAL)
             # h_c = cmd.altitude_command
-            # u_longitudinal = self.longitudinal_control.update()
-            # delta_e = u_longitudinal.item(0)
-            # delta_t = u_longitudinal.item(1)
-            # theta_c = MAV.alpha_star  # TODO?
-
-            # longitudinal autopilot (TEMPORARY FOR TESTING LATERAL)
-            h_c = cmd.altitude_command
-            theta_c = self.altitude_from_pitch.update(h_c, state.h)
-            delta_e = self.pitch_from_elevator.update(theta_c, state.theta, state.q)
-            delta_t = self.airspeed_from_throttle.update(cmd.airspeed_command, state.Va)
+            # theta_c = self.altitude_from_pitch.update(h_c, state.h)
+            # delta_e = self.pitch_from_elevator.update(theta_c, state.theta, state.q)
+            # delta_t = self.airspeed_from_throttle.update(cmd.airspeed_command, state.Va)
         else:
             # lateral autopilot
             chi_c = wrap(cmd.course_command, state.chi)
@@ -100,13 +111,13 @@ class autopilot:
             delta_t = self.airspeed_from_throttle.update(cmd.airspeed_command, state.Va)
 
         # construct output and commanded states
-        delta = np.array([[delta_a], [delta_e], [delta_r], [delta_t]])
+        self.delta = np.array([[delta_a], [delta_e], [delta_r], [delta_t]])
         self.commanded_state.h = cmd.altitude_command
         self.commanded_state.Va = cmd.airspeed_command
         self.commanded_state.phi = phi_c
         self.commanded_state.theta = theta_c
         self.commanded_state.chi = cmd.course_command
-        return delta, self.commanded_state
+        return self.delta, self.commanded_state
 
     def saturate(self, input, low_limit, up_limit):
         if input <= low_limit:
@@ -116,3 +127,54 @@ class autopilot:
         else:
             output = input
         return output
+    
+    def calculate_thrust(self, state, delta):
+        delta_t = delta.item(3)
+        if delta_t < 0:
+            delta_t = 0.0
+        V_in = MAV.V_max*delta_t
+
+        # Quadratic formula to solve for motor speed
+        a1 = MAV.rho * MAV.D_prop**5 / ((2.0*np.pi)**2) * MAV.C_Q0
+        b1 = MAV.rho * MAV.D_prop**4 / (2.0*np.pi) * MAV.C_Q1 * state.Va + (MAV.KQ**2)/MAV.R_motor
+        c1 = MAV.rho * MAV.D_prop**3 * MAV.C_Q2 * state.Va**2 - MAV.KQ / MAV.R_motor * V_in + MAV.KQ * MAV.i0
+
+        # Consider only positive root
+        Omega_op = (-b1 + np.sqrt(b1**2 - 4 * a1 * c1)) / (2.0 * a1)
+
+        # compute advance ratio
+        J_op = 2 * np.pi * state.Va / (Omega_op * MAV.D_prop)
+
+        # compute non-dimensionalized coefficients of thrust and torque
+        C_T = MAV.C_T2 * J_op**2 + MAV.C_T1 * J_op + MAV.C_T0
+
+        # add thrust and torque due to propeller
+        n = Omega_op / (2.0 * np.pi)
+        T = MAV.rho * n**2 * MAV.D_prop**4 * C_T
+        return T
+    
+    def calculate_drag(self, state, delta):
+        rho = MAV.rho
+        S = MAV.S_wing
+        a = state.theta
+        c = MAV.c
+        q = state.q
+        Va = state.Va
+
+        # control surface offsets
+        delta_e = delta.item(1)
+
+        # drag coefficients
+        C_D_q = MAV.C_D_q
+        C_L_q = MAV.C_L_q
+        C_D_de = MAV.C_D_delta_e
+        C_L_de = MAV.C_L_delta_e
+
+        C_D = lambda alpha: MAV.C_D_p + (MAV.C_L_0 + MAV.C_L_alpha*alpha)**2/(np.pi*MAV.e*MAV.AR)
+        sig = lambda alpha: (1 + np.exp(-MAV.M*(alpha-MAV.alpha0))+np.exp(MAV.M*(alpha+MAV.alpha0)))/((1+np.exp(-MAV.M*(alpha-MAV.alpha0)))*(1+np.exp(MAV.M*(alpha+MAV.alpha0))))
+        C_L = lambda alpha: (1-sig(alpha))*(MAV.C_L_0+MAV.C_L_alpha*alpha)+sig(alpha)*(2*np.sign(alpha)*np.sin(alpha)**2*np.cos(alpha))
+        C_X = lambda alpha: -C_D(alpha)*np.cos(alpha) + C_L(alpha)*np.sin(alpha)
+        C_X_q = lambda alpha: -C_D_q*np.cos(alpha) + C_L_q*np.sin(alpha)
+        C_X_de = lambda alpha: -C_D_de*np.cos(alpha) + C_L_de*np.sin(alpha)
+        T_D = (0.5 * rho * Va**2 * S)*(C_X(a) + C_X_q(a)*(c/(2*Va))*q + C_X_de(a)*delta_e)
+        return T_D

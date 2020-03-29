@@ -279,6 +279,7 @@ def euler_state(x_quat):
     # to x_euler with attitude represented by Euler angles
     e = np.array([[x_quat[6], x_quat[7], x_quat[8], x_quat[9]]])
     [phi, theta, psi] = Quaternion2Euler(e)
+    # states: pn, pe, pd, u, v, w, phi, theta, psi, p, q, r
     x_euler = np.array([[x_quat[0][0]],
                             [x_quat[1][0]],
                             [x_quat[2][0]],
@@ -297,6 +298,7 @@ def quaternion_state(x_euler):
     # convert state x_euler with attitude represented by Euler angles
     # to x_quat with attitude represented by quaternions
     e = Euler2Quaternion(x_euler[6], x_euler[7], x_euler[8])
+    # states: pn, pe, pd, u, v, w, e0, e1, e2, e3, p, q, r
     x_quat = np.array([[x_euler[0][0]],  # (0)
                             [x_euler[1][0]],  # (1)
                             [x_euler[2][0]],  # (2)

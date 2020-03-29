@@ -93,3 +93,14 @@ H = np.array([[0, 0, 0, 0, 1]])
 A_lqr = np.block([[A_lat, np.zeros((len(A_lat), 1))], [H, np.zeros((len(H), 1))]])
 B_lqr = np.block([[B_lat], [np.zeros((len(H), len(B_lat[0])))]])
 limit_lqr = np.array([[np.radians(45.)], [np.radians(45.)]])
+
+# --------------------------------------------------------------------------
+# ------------------------ TECS PARAMETERS ---------------------------------
+# --------------------------------------------------------------------------
+# 0 < k_T <= k_D
+K_tecs = np.array([[0.6, 1.3, 0.2, 0.2]])  #k_T, k_D, k_h, k_Va
+limit_tecs = np.array([[np.radians(45.)], [-np.radians(45.)], [1.0], [0.0]])  # +delta_e, -delta_e, +delta_t, -delta_t
+thrust_throttle_kp = 0.025
+thrust_throttle_ki = 0.02
+fpa_elevator_kp = -3.5
+fpa_elevator_ki = -0.2

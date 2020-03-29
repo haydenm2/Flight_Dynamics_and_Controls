@@ -7,7 +7,8 @@ hybrid_lqr_te_control
 import sys
 import numpy as np
 import scipy as scp
-from parameters import aerosonde_parameters as MAV
+from chap6.pid_control import pid_control, pi_control
+import parameters.control_parameters as AP
 sys.path.append('..')
 
 # lateral lqr controller
@@ -46,24 +47,84 @@ class lqr_control:
                 u_sat[i, 0] = u.item(i)
         return u_sat
 
-# longitudinal Total Energy Control
+
+# Longitudinal Total Energy Control
+# (from Nonlinear Total Energy Control for the Longitudinal Dynamics of an Aircraft by M. E. Argyle and R. W. Beard)
 class tecs_control:
-    def __init__(self, Ts=0.01, limit=1.0):
+    def __init__(self, K, limit, Ts, MAV):
         self.Ts = Ts
         self.limit = limit
+        self.MAV = MAV
+        self.k_T = K.item(0)
+        self.k_D = K.item(1)
+        self.k_h = K.item(2)
+        self.k_Va = K.item(3)
+        self.h_d = -self.MAV.pd0
+        self.h_d_dot = 0
+        self.Va_d = self.MAV.Va0
+        self.Va_d_dot = 0
 
-    def update(self, y_ref, y):
-        # control calculations
-        u = 0 #TODO
+        self.thrust_from_throttle = pi_control(
+            kp=AP.thrust_throttle_kp,
+            ki=AP.thrust_throttle_ki,
+            Ts=Ts,
+            limit=1.0)
+        self.flight_path_angle_from_elevator = pi_control(
+            kp=AP.fpa_elevator_kp,
+            ki=AP.fpa_elevator_ki,
+            Ts=Ts,
+            limit=1.0)
+
+    def update(self, state, command):
+        # MAV states
+        m = self.MAV.mass
+        g = self.MAV.gravity
+        h = state.item(0)           # altitude
+        Va = state.item(1)          # airspeed
+        theta = state.item(2)       # pitch angle
+        T = state.item(3)           # thrust
+        T_D = state.item(4)         # thrust to counteract drag
+        h_c = command.item(0)       # commanded altitude
+        Va_c = command.item(1)      # commanded airspeed
+
+        # Intermediate Desired Outputs
+        self.h_d_dot = self.k_h * (h_c - self.h_d)          # Desired altitude rate (eq 21)
+        self.Va_d_dot = self.k_Va * (Va_c - self.Va_d)      # Desired airspeed rate (eq 22)
+        self.h_d = self.h_d_dot * self.Ts + self.h_d        # Desired altitude
+        self.Va_d = self.Va_d_dot * self.Ts + self.Va_d     # Desired airspeed
+
+        ## ------------ ENERGY ------------ ##
+        # Energy error calculations
+        E_tilde_K = 1/2*m*(self.Va_d**2 - Va**2)  # Kinetic energy error
+        E_tilde_P = m*g*(self.h_d - h)  # Potential energy error
+        E_tilde_T = E_tilde_P + E_tilde_K  # Total energy error
+
+        E_dot_Td = self.Va_d*(T - T_D)     # Desired total energy rate (eq. 9)
+
+        # High Level Control
+        delta_T = E_dot_Td/Va + self.k_T*E_tilde_T/Va     # Thrust add-on to trim
+        T_c = T_D + delta_T                                 # Commanded thrust
+        k1 = np.abs(self.k_T - self.k_D)
+        k2 = self.k_T + self.k_D
+        # Commanded Flight Path Angle
+        gamma_c = np.arcsin(self.h_d_dot/Va + 1/(2.0*m*g*Va)*(-k1*E_tilde_K + k2*E_tilde_P))
+
+        delta_e = self.flight_path_angle_from_elevator.update(gamma_c, theta)
+        delta_t = self.thrust_from_throttle.update(T_c, T)
+
+        # Control Outputs
+        u = np.array([[delta_e, delta_t]])
         u_sat = self._saturate(u)
         return u_sat
 
     def _saturate(self, u):
         # saturate u at +- self.limit
-        if u >= self.limit:
-            u_sat = self.limit
-        elif u <= -self.limit:
-            u_sat = -self.limit
-        else:
-            u_sat = u
+        u_sat = u
+        for i in range(len(u[0])):
+            if u.item(i) >= self.limit.item(2*i):
+                u_sat[0, i] = self.limit.item(2*i)
+            elif u.item(i) <= self.limit.item(2*i+1):
+                u_sat[0, i] = self.limit.item(2*i+1)
+            else:
+                u_sat[0, i] = u.item(i)
         return u_sat

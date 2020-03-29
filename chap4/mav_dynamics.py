@@ -47,6 +47,7 @@ class mav_dynamics:
         self.thrust = 0
         # initialize true_state message
         self.msg_true_state = msg_state()
+        self._update_msg_true_state()
 
     ###################################
     # public functions
