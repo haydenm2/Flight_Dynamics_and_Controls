@@ -70,12 +70,14 @@ class autopilot:
             # chi_c = cmd.course_command
             # chi = wrap(state.chi, cmd.course_command)
             # e_I = chi - chi_c
-            # phi_c = 0
-            # x_lat[4, 0] = chi
+            # x_lat[4, 0] = chi - chi_c
+            # # e_I = self.saturate(chi - chi_c, -np.radians(40), np.radians(40))
+            # # x_lat[4, 0] = self.saturate(chi - chi_c, -np.radians(90), np.radians(90))
             # u_lateral = self.lateral_control.update(x_lat, e_I)
             # delta_a = u_lateral.item(0)
             # delta_r = u_lateral.item(1)
-            #
+            # phi_c = 0
+
             # # longitudinal autopilot (TEMPORARY FOR TESTING LATERAL)
             # h_c = cmd.altitude_command
             # theta_c = self.altitude_from_pitch.update(h_c, state.h)
