@@ -95,9 +95,8 @@ class path_manager:
                 self.path.flag_path_changed = True
             if self.inHalfSpace(p):
                 self.init = True
-                if self.ptr_current <= (self.num_waypoints - 1):
-                    self.increment_pointers()
-                    self.manager_state = 1
+                self.increment_pointers()
+                self.manager_state = 1
 
 
     def dubins_manager(self, waypoints, radius, state):
@@ -164,13 +163,12 @@ class path_manager:
             if self.inHalfSpace(p):
                 self.manager_state = 1
                 self.init = True
-                if self.ptr_current <= (self.num_waypoints - 1):
-                    self.increment_pointers()
-                    w_prev = waypoints.ned[:, self.ptr_previous].reshape(-1, 1)
-                    chi_prev = waypoints.course.item(self.ptr_previous)
-                    w_curr = waypoints.ned[:, self.ptr_current].reshape(-1, 1)
-                    chi_curr = waypoints.course.item(self.ptr_current)
-                    self.dubins_path.update(w_prev, chi_prev, w_curr, chi_curr, radius)
+                self.increment_pointers()
+                w_prev = waypoints.ned[:, self.ptr_previous].reshape(-1, 1)
+                chi_prev = waypoints.course.item(self.ptr_previous)
+                w_curr = waypoints.ned[:, self.ptr_current].reshape(-1, 1)
+                chi_curr = waypoints.course.item(self.ptr_current)
+                self.dubins_path.update(w_prev, chi_prev, w_curr, chi_curr, radius)
 
     def initialize_pointers(self):
         self.ptr_previous = 0
@@ -178,9 +176,22 @@ class path_manager:
         self.ptr_next = 2
 
     def increment_pointers(self):
-        self.ptr_previous += 1
-        self.ptr_current += 1
-        self.ptr_next += 1
+        if self.ptr_current == self.num_waypoints-2:
+            self.ptr_previous += 1
+            self.ptr_current += 1
+            self.ptr_next = 0
+        elif self.ptr_current == self.num_waypoints-1:
+            self.ptr_previous += 1
+            self.ptr_current = 0
+            self.ptr_next += 1
+        elif self.ptr_current == 0:
+            self.ptr_previous = 0
+            self.ptr_current += 1
+            self.ptr_next += 1
+        else:
+            self.ptr_previous += 1
+            self.ptr_current += 1
+            self.ptr_next += 1
 
     def inHalfSpace(self, pos):
         if (pos-self.halfspace_r).T @ self.halfspace_n >= 0:

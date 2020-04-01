@@ -86,7 +86,7 @@ R = np.inf
 trim_state, trim_input = compute_trim(mav, Va, gamma, R)
 A_lon, B_lon, A_lat, B_lat = compute_ss_model(mav, trim_state, trim_input, euler=True)
 # big value implies more cost for variable, low means low cost
-Q = np.diag((1.0/1.0, 1.0/1.0, 1.0/1.0, 1.0/10.0, 1.0/5.0, 1.0/5.0))  # v, p, r, phi, psi, psi_int
+Q = np.diag((1.0/1.0, 1.0/1.0, 1.0/1.0, 0.0, 0.0, 1.0/5.0))  # v, p, r, phi, psi, psi_int
 R = np.diag((30.0/1.0, 5.0/1.0))  # da, dr
 
 H = np.array([[0, 0, 0, 0, 1]])
@@ -103,4 +103,4 @@ limit_tecs = np.array([[np.radians(45.)], [-np.radians(45.)], [1.0], [0.0]])  # 
 thrust_throttle_kp = 0.025
 thrust_throttle_ki = 0.02
 fpa_elevator_kp = -3.5
-fpa_elevator_ki = -0.2
+fpa_elevator_kd = -0.2

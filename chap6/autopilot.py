@@ -75,28 +75,29 @@ class autopilot:
             # u_lateral = self.lateral_control.update(x_lat, e_I)
             # delta_a = u_lateral.item(0)
             # delta_r = u_lateral.item(1)
+            #
+            # # longitudinal autopilot (TEMPORARY FOR TESTING LATERAL)
+            # h_c = cmd.altitude_command
+            # theta_c = self.altitude_from_pitch.update(h_c, state.h)
+            # delta_e = self.pitch_from_elevator.update(theta_c, state.theta, state.q)
+            # delta_t = self.airspeed_from_throttle.update(cmd.airspeed_command, state.Va)
 
             # TECS longitudinal autopilot
             T = self.calculate_thrust(state, self.delta)
             D = self.calculate_drag(state, self.delta)
-            x_tecs = np.array([[state.h, state.Vg, state.theta, T, D]]).T
+            x_tecs = np.array([[state.h, state.Vg, state.theta, state.q, T, D]]).T
             command = np.array([[cmd.altitude_command], [cmd.airspeed_command]])
             u_longitudinal = self.longitudinal_control.update(x_tecs, command)
             delta_e = u_longitudinal.item(0)
             delta_t = u_longitudinal.item(1)
             theta_c = MAV.alpha_star
 
-            # lateral autopilot
+            # lateral autopilot (TEMPORARY FOR TESTING LONGITUDINAL)
             chi_c = wrap(cmd.course_command, state.chi)
             phi_c = cmd.phi_feedforward + self.course_from_roll.update(chi_c, state.chi)
             delta_a = self.roll_from_aileron.update(phi_c, state.phi, state.p)
             delta_r = self.yaw_damper.update(state.r)
 
-            # # longitudinal autopilot (TEMPORARY FOR TESTING LATERAL)
-            # h_c = cmd.altitude_command
-            # theta_c = self.altitude_from_pitch.update(h_c, state.h)
-            # delta_e = self.pitch_from_elevator.update(theta_c, state.theta, state.q)
-            # delta_t = self.airspeed_from_throttle.update(cmd.airspeed_command, state.Va)
         else:
             # lateral autopilot
             chi_c = wrap(cmd.course_command, state.chi)

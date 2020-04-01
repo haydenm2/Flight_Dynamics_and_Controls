@@ -7,7 +7,7 @@ hybrid_lqr_te_control
 import sys
 import numpy as np
 import scipy as scp
-from chap6.pid_control import pid_control, pi_control
+from chap6.pid_control import pd_control_with_rate, pi_control
 import parameters.control_parameters as AP
 sys.path.append('..')
 
@@ -69,10 +69,10 @@ class tecs_control:
             ki=AP.thrust_throttle_ki,
             Ts=Ts,
             limit=1.0)
-        self.flight_path_angle_from_elevator = pi_control(
+        self.flight_path_angle_from_elevator = pd_control_with_rate(
             kp=AP.fpa_elevator_kp,
-            ki=AP.fpa_elevator_ki,
-            Ts=Ts,
+            kd=AP.fpa_elevator_kd,
+            # Ts=Ts,
             limit=1.0)
 
     def update(self, state, command):
@@ -82,8 +82,9 @@ class tecs_control:
         h = state.item(0)           # altitude
         Va = state.item(1)          # airspeed
         theta = state.item(2)       # pitch angle
-        T = state.item(3)           # thrust
-        T_D = state.item(4)         # thrust to counteract drag
+        q = state.item(3)           # pitch rate
+        T = state.item(4)           # thrust
+        T_D = state.item(5)         # thrust to counteract drag
         h_c = command.item(0)       # commanded altitude
         Va_c = command.item(1)      # commanded airspeed
 
@@ -109,7 +110,7 @@ class tecs_control:
         # Commanded Flight Path Angle
         gamma_c = np.arcsin(self.h_d_dot/Va + 1/(2.0*m*g*Va)*(-k1*E_tilde_K + k2*E_tilde_P))
 
-        delta_e = self.flight_path_angle_from_elevator.update(gamma_c, theta)
+        delta_e = self.flight_path_angle_from_elevator.update(gamma_c, theta, q)
         delta_t = self.thrust_from_throttle.update(T_c, T)
 
         # Control Outputs
