@@ -7,7 +7,8 @@ hybrid_lqr_te_control
 import sys
 import numpy as np
 import scipy as scp
-from chap6.pid_control import pd_control_with_rate, pi_control
+from chap6.pid_control import pid_control, pd_control_with_rate, pi_control
+import parameters.aerosonde_parameters as MAV
 import parameters.control_parameters as AP
 sys.path.append('..')
 
@@ -69,8 +70,9 @@ class tecs_control:
             ki=AP.thrust_throttle_ki,
             Ts=Ts,
             limit=1.0)
-        self.flight_path_angle_from_elevator = pd_control_with_rate(
+        self.flight_path_angle_from_elevator = pid_control(
             kp=AP.fpa_elevator_kp,
+            ki=AP.fpa_elevator_ki,
             kd=AP.fpa_elevator_kd,
             # Ts=Ts,
             limit=1.0)
@@ -108,14 +110,28 @@ class tecs_control:
         k1 = np.abs(self.k_T - self.k_D)
         k2 = self.k_T + self.k_D
         # Commanded Flight Path Angle
-        gamma_c = np.arcsin(self.h_d_dot/Va + 1/(2.0*m*g*Va)*(-k1*E_tilde_K + k2*E_tilde_P))
+        theta_max = np.sin(np.radians(40))
+        temp = self.saturate(self.h_d_dot/Va + 1/(2.0*m*g*Va)*(-k1*E_tilde_K + k2*E_tilde_P), -theta_max, theta_max)
+        gamma_c = np.arcsin(temp)
+        gamma_c += MAV.theta_star
 
-        delta_e = self.flight_path_angle_from_elevator.update(gamma_c, theta, q)
+        delta_e = self.flight_path_angle_from_elevator.update_with_rate(gamma_c, theta, q)
         delta_t = self.thrust_from_throttle.update(T_c, T)
 
         # Control Outputs
         u = np.array([[delta_e, delta_t]])
         u_sat = self._saturate(u)
+        return [u_sat, gamma_c]
+
+    def saturate(self, u, lower, upper):
+        # saturate u at +- self.limit
+        u_sat = u
+        if u >= upper:
+            u_sat = upper
+        elif u <= lower:
+            u_sat = lower
+        else:
+            u_sat = u
         return u_sat
 
     def _saturate(self, u):

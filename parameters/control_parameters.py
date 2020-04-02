@@ -99,9 +99,10 @@ limit_lqr = np.array([[np.radians(45.)], [np.radians(45.)]])
 # ------------------------ TECS PARAMETERS ---------------------------------
 # --------------------------------------------------------------------------
 # 0 < k_T <= k_D
-K_tecs = np.array([[0.3, 0.7, 0.2, 0.2]])  #k_T, k_D, k_h, k_Va
+K_tecs = np.array([[1.0, 3.6, 0.6, 0.6]])  #k_T, k_D, k_h, k_Va
 limit_tecs = np.array([[np.radians(45.)], [-np.radians(45.)], [1.0], [0.0]])  # +delta_e, -delta_e, +delta_t, -delta_t
 thrust_throttle_kp = 0.025
 thrust_throttle_ki = 0.02
 fpa_elevator_kp = -3.5
+fpa_elevator_ki = -2.0
 fpa_elevator_kd = -0.2

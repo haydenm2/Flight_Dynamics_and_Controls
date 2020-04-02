@@ -65,18 +65,18 @@ class autopilot:
 
     def update(self, cmd, state):
         if self.lqr_tecs:
-            # # LQR lateral autopilot
-            # x_lat = np.array([[np.sin(state.beta)*state.Va, state.p, state.r, state.phi, state.chi]]).T # using beta as an estimate for v
-            # chi_c = cmd.course_command
-            # chi = wrap(state.chi, cmd.course_command)
-            # e_I = chi - chi_c
-            # x_lat[4, 0] = chi - chi_c
-            # # e_I = self.saturate(chi - chi_c, -np.radians(40), np.radians(40))
-            # # x_lat[4, 0] = self.saturate(chi - chi_c, -np.radians(90), np.radians(90))
-            # u_lateral = self.lateral_control.update(x_lat, e_I)
-            # delta_a = u_lateral.item(0)
-            # delta_r = u_lateral.item(1)
-            # phi_c = 0
+            # LQR lateral autopilot
+            x_lat = np.array([[np.sin(state.beta)*state.Va, state.p, state.r, state.phi, state.chi]]).T # using beta as an estimate for v
+            chi_c = cmd.course_command
+            chi = wrap(state.chi, cmd.course_command)
+            e_I = chi - chi_c
+            x_lat[4, 0] = chi - chi_c
+            # e_I = self.saturate(chi - chi_c, -np.radians(40), np.radians(40))
+            # x_lat[4, 0] = self.saturate(chi - chi_c, -np.radians(90), np.radians(90))
+            u_lateral = self.lateral_control.update(x_lat, e_I)
+            delta_a = u_lateral.item(0)
+            delta_r = u_lateral.item(1)
+            phi_c = 0
 
             # # longitudinal autopilot (TEMPORARY FOR TESTING LATERAL)
             # h_c = cmd.altitude_command
@@ -89,16 +89,15 @@ class autopilot:
             D = self.calculate_drag(state, self.delta)
             x_tecs = np.array([[state.h, state.Vg, state.theta, state.q, T, D]]).T
             command = np.array([[cmd.altitude_command], [cmd.airspeed_command]])
-            u_longitudinal = self.longitudinal_control.update(x_tecs, command)
+            [u_longitudinal, theta_c] = self.longitudinal_control.update(x_tecs, command)
             delta_e = u_longitudinal.item(0)
             delta_t = u_longitudinal.item(1)
-            theta_c = MAV.alpha_star
 
-            # lateral autopilot (TEMPORARY FOR TESTING LONGITUDINAL)
-            chi_c = wrap(cmd.course_command, state.chi)
-            phi_c = cmd.phi_feedforward + self.course_from_roll.update(chi_c, state.chi)
-            delta_a = self.roll_from_aileron.update(phi_c, state.phi, state.p)
-            delta_r = self.yaw_damper.update(state.r)
+            # # lateral autopilot (TEMPORARY FOR TESTING LONGITUDINAL)
+            # chi_c = wrap(cmd.course_command, state.chi)
+            # phi_c = cmd.phi_feedforward + self.course_from_roll.update(chi_c, state.chi)
+            # delta_a = self.roll_from_aileron.update(phi_c, state.phi, state.p)
+            # delta_r = self.yaw_damper.update(state.r)
 
         else:
             # lateral autopilot
@@ -159,7 +158,7 @@ class autopilot:
     def calculate_drag(self, state, delta):
         rho = MAV.rho
         S = MAV.S_wing
-        a = state.theta
+        a = 0 #state.theta
         c = MAV.c
         q = state.q
         Va = state.Va
