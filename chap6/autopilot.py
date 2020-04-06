@@ -19,16 +19,17 @@ from message_types.msg_state import msg_state
 
 class autopilot:
     def __init__(self, ts_control):
-        self.control_type = 3  # 0=lqr_tecs, 1=complete_lqr, 2=tecs_only, 3=PID
-        if self.control_type == 0:
+        self.lateral_control_type = 0  # 0=LQR, 1=PID
+        self.longitudinal_control_type = 0  # 0=TECS, 1=LQR, 2=PID
+
+        if self.lateral_control_type == 0:
             self.lateral_control = lqr_control(AP.A_lat_lqr, AP.B_lat_lqr, AP.Q_lat, AP.R_lat, AP.limit_lat_lqr, ts_control)
+
+        if self.longitudinal_control_type == 0:
             self.longitudinal_control = tecs_control(AP.K_tecs, AP.limit_tecs, ts_control, MAV)
-        elif self.control_type == 1:
-            self.lateral_control = lqr_control(AP.A_lat_lqr, AP.B_lat_lqr, AP.Q_lat, AP.R_lat, AP.limit_lat_lqr, ts_control)
+        elif self.longitudinal_control_type == 1:
             self.longitudinal_control = lqr_control(AP.A_lon_lqr, AP.B_lon_lqr, AP.Q_lon, AP.R_lon, AP.limit_lon_lqr, ts_control)
-        elif self.control_type == 2:
-            self.longitudinal_control = tecs_control(AP.K_tecs, AP.limit_tecs, ts_control, MAV)
-        # instantiate lateral controllers
+
         self.roll_from_aileron = pd_control_with_rate(
                         kp=AP.roll_kp,
                         kd=AP.roll_kd,
@@ -68,29 +69,8 @@ class autopilot:
         self.delta = np.array([[MAV.delta_a_star, MAV.delta_e_star, MAV.delta_r_star, MAV.delta_t_star]])  #TODO: ensure start at equilibrium
 
     def update(self, cmd, state):
-        if self.control_type == 0:
-            #### MIXED LQR TECS CONTROLLER ####
-            # LQR lateral autopilot
-            x_lat = np.array([[np.sin(state.beta)*state.Va, state.p, state.r, state.phi, state.chi]]).T # using beta as an estimate for v
-            chi_c = cmd.course_command
-            chi = wrap(state.chi, cmd.course_command)
-            e_I_lat = chi - chi_c
-            x_lat[4, 0] = chi - chi_c
-            u_lateral = self.lateral_control.update(x_lat, e_I_lat)
-            delta_a = u_lateral.item(0)
-            delta_r = u_lateral.item(1)
-            phi_c = 0
-
-            # TECS longitudinal autopilot
-            T = self.calculate_thrust(state, self.delta)
-            D = self.calculate_drag(state, self.delta)
-            x_tecs = np.array([[state.h, state.Vg, state.theta, state.q, T, D]]).T
-            command = np.array([[cmd.altitude_command], [cmd.airspeed_command]])
-            [u_longitudinal, theta_c] = self.longitudinal_control.update(x_tecs, command)
-            delta_e = u_longitudinal.item(0)
-            delta_t = u_longitudinal.item(1)
-        elif self.control_type == 1:
-            #### TOTAL LQR CONTROL ####
+        # LATERAL CONTROLLER SELECTION
+        if self.lateral_control_type == 0:
             # LQR lateral autopilot
             x_lat = np.array([[np.sin(state.beta) * state.Va, state.p, state.r, state.phi,
                                state.chi]]).T  # using beta as an estimate for v
@@ -102,38 +82,15 @@ class autopilot:
             delta_a = u_lateral.item(0)
             delta_r = u_lateral.item(1)
             phi_c = 0
-
-            # # lateral autopilot  (TEMP!)
-            # chi_c = 0 #wrap(cmd.course_command, state.chi)
-            # phi_c = 0 #cmd.phi_feedforward + self.course_from_roll.update(chi_c, state.chi)
-            # delta_a = self.roll_from_aileron.update(phi_c, state.phi, state.p)
-            # delta_r = self.yaw_damper.update(state.r)
-
-            # LQR longitudinal autopilot
-            x_lon = np.array([[np.sin(state.alpha)*state.Va, np.sin(state.alpha)*state.Va, state.q, state.theta, state.h]]).T  # u, w, q, theta, h
-            h_c = cmd.altitude_command
-            Va_c = cmd.airspeed_command
-            Va = state.Va
-            h = state.h
-            x_lon[0, 0] = np.sin(state.alpha)*Va - np.sin(state.alpha)*Va_c
-            x_lon[4, 0] = h - h_c
-            e_I_lon = np.array([[h - h_c],
-                                [Va - Va_c]])
-            # x_lon[4, 0] = self.saturate(h - h_c, -50, 50)
-            # e_I_lon = np.array([[self.saturate(h - h_c, -50, 50)],
-            #                     [Va - Va_c]])
-            u_longitudinal = self.longitudinal_control.update(x_lon, e_I_lon)
-            delta_e = u_longitudinal.item(0) #+ MAV.delta_e_star
-            delta_t = u_longitudinal.item(1) #+ MAV.delta_t_star
-            theta_c = MAV.alpha_star
-        elif self.control_type == 2:
-            #### TECS LONGITUDINAL ONLY CONTROL ####
+        elif self.lateral_control_type == 1:
             # PID lateral autopilot
             chi_c = wrap(cmd.course_command, state.chi)
             phi_c = cmd.phi_feedforward + self.course_from_roll.update(chi_c, state.chi)
             delta_a = self.roll_from_aileron.update(phi_c, state.phi, state.p)
             delta_r = self.yaw_damper.update(state.r)
 
+        # LONGITUDINAL CONTROLLER SELECTION
+        if self.longitudinal_control_type == 0:
             # TECS longitudinal autopilot
             T = self.calculate_thrust(state, self.delta)
             D = self.calculate_drag(state, self.delta)
@@ -142,15 +99,27 @@ class autopilot:
             [u_longitudinal, theta_c] = self.longitudinal_control.update(x_tecs, command)
             delta_e = u_longitudinal.item(0)
             delta_t = u_longitudinal.item(1)
-        else:
-            #### PID CONTROL ####
-            # lateral autopilot
-            chi_c = wrap(cmd.course_command, state.chi)
-            phi_c = cmd.phi_feedforward + self.course_from_roll.update(chi_c, state.chi)
-            delta_a = self.roll_from_aileron.update(phi_c, state.phi, state.p)
-            delta_r = self.yaw_damper.update(state.r)
-
-            # longitudinal autopilot
+        elif self.longitudinal_control_type == 1:
+            # LQR longitudinal autopilot
+            x_lon = np.array([[np.sin(state.alpha) * state.Va, np.sin(state.alpha) * state.Va, state.q, state.theta,
+                               state.h]]).T  # u, w, q, theta, h
+            h_c = cmd.altitude_command
+            Va_c = cmd.airspeed_command
+            Va = state.Va
+            h = state.h
+            x_lon[0, 0] = np.sin(state.alpha) * Va - np.sin(state.alpha) * Va_c
+            x_lon[4, 0] = h - h_c
+            e_I_lon = np.array([[h - h_c],
+                                [Va - Va_c]])
+            # x_lon[4, 0] = self.saturate(h - h_c, -50, 50)
+            # e_I_lon = np.array([[self.saturate(h - h_c, -50, 50)],
+            #                     [Va - Va_c]])
+            u_longitudinal = self.longitudinal_control.update(x_lon, e_I_lon)
+            delta_e = u_longitudinal.item(0)  # + MAV.delta_e_star
+            delta_t = u_longitudinal.item(1)  # + MAV.delta_t_star
+            theta_c = MAV.alpha_star
+        elif self.longitudinal_control_type == 2:
+            # PID longitudinal autopilot
             h_c = cmd.altitude_command
             theta_c = self.altitude_from_pitch.update(h_c, state.h)
             delta_e = self.pitch_from_elevator.update(theta_c, state.theta, state.q)

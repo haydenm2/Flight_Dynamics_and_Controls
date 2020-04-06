@@ -115,7 +115,7 @@ limit_lon_lqr = np.array([[np.radians(45.)], [-np.radians(45.)], [1.0], [0.0]]) 
 # ------------------------ TECS PARAMETERS ---------------------------------
 # --------------------------------------------------------------------------
 # 0 < k_T <= k_D
-K_tecs = np.array([[1.0, 3.6, 0.5, 0.5]])  #k_T, k_D, k_h, k_Va
+K_tecs = np.array([[1.0, 3.6, 0.3, 0.3]])  #k_T, k_D, k_h, k_Va
 limit_tecs = np.array([[np.radians(45.)], [-np.radians(45.)], [1.0], [0.0]])  # +delta_e, -delta_e, +delta_t, -delta_t
 thrust_throttle_kp = 0.025
 thrust_throttle_ki = 0.02
