@@ -10,6 +10,7 @@ sys.path.append('..')
 from message_types.msg_waypoints import msg_waypoints
 from chap12.planRRT import planRRT
 from chap12.planRRTDubins import planRRTDubins
+import parameters.aerosonde_parameters as MAV
 
 class path_planner:
     def __init__(self):
@@ -58,17 +59,20 @@ class path_planner:
             # current configuration vector format: N, E, D, Va
             wpp_start = np.array([state.pn,
                                   state.pe,
-                                  -state.h,
+                                  MAV.pd0,
+                                  # -state.h,
                                   state.Va])
             if np.linalg.norm(np.array([state.pn, state.pe, -state.h])-np.array([map.city_width, map.city_width, -state.h])) == 0:
                 wpp_end = np.array([0,
                                     0,
-                                    -state.h,
+                                    MAV.pd0,
+                                    # -state.h,
                                     Va])
             else:
                 wpp_end = np.array([map.city_width,
                                     map.city_width,
-                                    -state.h,
+                                    MAV.pd0,
+                                    # -state.h,
                                     Va])
 
             waypoints = self.rrt.planPath(wpp_start, wpp_end, map)
@@ -82,18 +86,21 @@ class path_planner:
             # current configuration vector format: N, E, D, Va
             wpp_start = np.array([state.pn,
                                   state.pe,
-                                  -state.h,
+                                  # -state.h,
+                                  MAV.pd0,
                                   state.Va])
             if np.linalg.norm(np.array([state.pn, state.pe, -state.h]) - np.array(
                     [map.city_width, map.city_width, -state.h])) == 0:
                 wpp_end = np.array([0,
                                     0,
-                                    -state.h,
+                                    MAV.pd0,
+                                    # -state.h,
                                     Va])
             else:
                 wpp_end = np.array([map.city_width,
                                     map.city_width,
-                                    -state.h,
+                                    MAV.pd0,
+                                    # -state.h,
                                     Va])
 
             waypoints = self.rrt_dubins.planPath(wpp_start, wpp_end, map, R)

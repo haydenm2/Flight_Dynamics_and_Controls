@@ -23,13 +23,21 @@ class lqr_control:
         self.B = B
         self.P = scp.linalg.solve_continuous_are(self.A, self.B, self.Q, self.R)
         self.K_lqr = np.linalg.inv(self.R) @ self.B.T @ self.P
-        self.x_I = 0
-        self.e_I_prev = 0
+        self.init = True
 
     def update(self, x, e_I):
         # integrator anti-windup
-        if np.abs(e_I-self.e_I_prev)/self.Ts < 0.2:
-            self.x_I += self.Ts / 2 * (e_I + self.e_I_prev)
+        if self.init:
+            self.x_I = e_I*0
+            self.e_I_prev = e_I*0
+            self.init = False
+        for i in range(np.alen(e_I)):
+            if np.alen(e_I) > 1:
+                if np.abs(e_I.item(i)-self.e_I_prev.item(i))/self.Ts < 0.2:
+                    self.x_I[i, 0] += self.Ts / 2 * (e_I.item(i) + self.e_I_prev.item(i))
+            else:
+                if np.abs(e_I-self.e_I_prev)/self.Ts < 0.2:
+                    self.x_I += self.Ts / 2 * (e_I + self.e_I_prev)
         self.e_I_prev = e_I
         xi = np.vstack([x, self.x_I])
         u = -self.K_lqr @ xi
@@ -40,10 +48,10 @@ class lqr_control:
         # saturate u at +- self.limit
         u_sat = u
         for i in range(len(u)):
-            if u.item(i) >= self.limit.item(i):
-                u_sat[i, 0] = self.limit.item(i)
-            elif u.item(i) <= -self.limit.item(i):
-                u_sat[i, 0] = -self.limit.item(i)
+            if u.item(i) >= self.limit.item(2 * i):
+                u_sat[i, 0] = self.limit.item(2 * i)
+            elif u.item(i) <= self.limit.item(2 * i + 1):
+                u_sat[i, 0] = self.limit.item(2 * i + 1)
             else:
                 u_sat[i, 0] = u.item(i)
         return u_sat

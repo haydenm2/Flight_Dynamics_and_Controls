@@ -86,20 +86,36 @@ R = np.inf
 trim_state, trim_input = compute_trim(mav, Va, gamma, R)
 A_lon, B_lon, A_lat, B_lat = compute_ss_model(mav, trim_state, trim_input, euler=True)
 # big value implies more cost for variable, low means low cost
-# Q = np.diag((1.0/1.0, 1.0/1.0, 1.0/1.0, 1.0/2.0, 1.0/2.0, 1.0/40.0))  # v, p, r, phi, psi, psi_int
-Q = np.diag((1.0/1.0, 1.0/1.0, 1.0/1.0, 0.0/2.0, 1.0/10.0, 1.0/100.0))  # v, p, r, phi, psi, psi_int
-R = np.diag((50.0/1.0, 50.0/1.0))  # da, dr
+# Q_lat = np.diag((1.0/1.0, 1.0/1.0, 1.0/1.0, 1.0/2.0, 1.0/2.0, 1.0/40.0))  # v, p, r, phi, psi, psi_int
+Q_lat = np.diag((1.0/1.0, 1.0/1.0, 1.0/1.0, 0.0/2.0, 1.0/10.0, 1.0/100.0))  # v, p, r, phi, psi, psi_int
+R_lat = np.diag((50.0/1.0, 50.0/1.0))  # da, dr
+H_lat = np.array([[0, 0, 0, 0, 1]])
+A_lat_lqr = np.block([[A_lat, np.zeros((len(A_lat), len(H_lat)))],
+                      [H_lat, np.zeros((len(H_lat), len(H_lat)))]])
+B_lat_lqr = np.block([[B_lat],
+                      [np.zeros((len(H_lat), len(B_lat[0])))]])
+limit_lat_lqr = np.array([[np.radians(45.)], [-np.radians(45.)], [np.radians(45.)], [-np.radians(45.)]])
 
-H = np.array([[0, 0, 0, 0, 1]])
-A_lqr = np.block([[A_lat, np.zeros((len(A_lat), 1))], [H, np.zeros((len(H), 1))]])
-B_lqr = np.block([[B_lat], [np.zeros((len(H), len(B_lat[0])))]])
-limit_lqr = np.array([[np.radians(45.)], [np.radians(45.)]])
+# Q_lon = np.diag((1.0/25.0, 1.0/1.0, 1.0/10.0, 1.0/10.0, 1.0/2000.0, 1.0/1000.0, 1.0/10.0))  # u, w, q, theta, h, h_int, Va_int
+# R_lon = np.diag((100.0/1.0, 1000.0/1.0))  # de, dt
+
+#                u_tilde,     w,       q,        theta,   h_tilde, h_int,   Va_int
+Q_lon = np.diag((10000.0/1.0, 0.0/1.0, 1.0/10.0, 0.0/1.0, 20.0/1.0, 1.0/1.0, 10.0/1.0))  # u, w, q, theta, h, h_int, Va_int
+#                de,        dt
+R_lon = np.diag((600.0/1.0, 500.0/1.0))  # de, dt
+
+H_lon = np.array([[0, 0, 0, 0, 1], [1/Va, 1/Va, 0, 0, 0]])
+A_lon_lqr = np.block([[A_lon, np.zeros((len(A_lon), len(H_lon)))],
+                      [H_lon, np.zeros((len(H_lon), len(H_lon)))]])
+B_lon_lqr = np.block([[B_lon],
+                      [np.zeros((len(H_lon), len(B_lon[0])))]])
+limit_lon_lqr = np.array([[np.radians(45.)], [-np.radians(45.)], [1.0], [0.0]])  # +delta_e, -delta_e, +delta_t, -delta_t
 
 # --------------------------------------------------------------------------
 # ------------------------ TECS PARAMETERS ---------------------------------
 # --------------------------------------------------------------------------
 # 0 < k_T <= k_D
-K_tecs = np.array([[1.0, 3.6, 0.6, 0.6]])  #k_T, k_D, k_h, k_Va
+K_tecs = np.array([[1.0, 3.6, 0.5, 0.5]])  #k_T, k_D, k_h, k_Va
 limit_tecs = np.array([[np.radians(45.)], [-np.radians(45.)], [1.0], [0.0]])  # +delta_e, -delta_e, +delta_t, -delta_t
 thrust_throttle_kp = 0.025
 thrust_throttle_ki = 0.02

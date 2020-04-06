@@ -151,7 +151,7 @@ class path_manager:
             if self.init == True:
                 self.init = False
                 self.path.flag_path_changed = True
-            if self.inHalfSpace(p):
+            if self.inHalfSpace(p) or np.linalg.norm(self.dubins_path.n1-self.dubins_path.n3) < 0.01:  #if halfspace directions are too close the MAV does an extra loop
                 self.manager_state = 5
                 self.init = True
         elif self.manager_state == 5:  # second half of end orbit
