@@ -94,7 +94,7 @@ class autopilot:
             # TECS longitudinal autopilot
             T = self.calculate_thrust(state, self.delta)
             D = self.calculate_drag(state, self.delta)
-            x_tecs = np.array([[state.h, state.Vg, state.theta, state.q, T, D]]).T
+            x_tecs = np.array([[state.h, state.Vg, state.theta, state.q, T, D, state.alpha]]).T
             command = np.array([[cmd.altitude_command], [cmd.airspeed_command]])
             [u_longitudinal, theta_c] = self.longitudinal_control.update(x_tecs, command)
             delta_e = u_longitudinal.item(0)
@@ -111,9 +111,6 @@ class autopilot:
             x_lon[4, 0] = h - h_c
             e_I_lon = np.array([[h - h_c],
                                 [Va - Va_c]])
-            # x_lon[4, 0] = self.saturate(h - h_c, -50, 50)
-            # e_I_lon = np.array([[self.saturate(h - h_c, -50, 50)],
-            #                     [Va - Va_c]])
             u_longitudinal = self.longitudinal_control.update(x_lon, e_I_lon)
             delta_e = u_longitudinal.item(0)  # + MAV.delta_e_star
             delta_t = u_longitudinal.item(1)  # + MAV.delta_t_star
@@ -171,7 +168,7 @@ class autopilot:
     def calculate_drag(self, state, delta):
         rho = MAV.rho
         S = MAV.S_wing
-        a = 0 #state.theta
+        a = state.alpha
         c = MAV.c
         q = state.q
         Va = state.Va

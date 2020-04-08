@@ -95,6 +95,7 @@ class tecs_control:
         q = state.item(3)           # pitch rate
         T = state.item(4)           # thrust
         T_D = state.item(5)         # thrust to counteract drag
+        alpha = state.item(6)       # angle of attack
         h_c = command.item(0)       # commanded altitude
         Va_c = command.item(1)      # commanded airspeed
 
@@ -121,15 +122,15 @@ class tecs_control:
         theta_max = np.sin(np.radians(40))
         temp = self.saturate(self.h_d_dot/Va + 1/(2.0*m*g*Va)*(-k1*E_tilde_K + k2*E_tilde_P), -theta_max, theta_max)
         gamma_c = np.arcsin(temp)
-        gamma_c += MAV.theta_star
+        theta_c = gamma_c + alpha
 
-        delta_e = self.flight_path_angle_from_elevator.update_with_rate(gamma_c, theta, q)
+        delta_e = self.flight_path_angle_from_elevator.update_with_rate(theta_c, theta, q)
         delta_t = self.thrust_from_throttle.update(T_c, T)
 
         # Control Outputs
         u = np.array([[delta_e, delta_t]])
         u_sat = self._saturate(u)
-        return [u_sat, gamma_c]
+        return [u_sat, theta_c]
 
     def saturate(self, u, lower, upper):
         # saturate u at +- self.limit
