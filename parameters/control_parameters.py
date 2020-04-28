@@ -45,7 +45,7 @@ yaw_damper_tau_r = 0.05
 yaw_damper_kp = 0.5
 
 #----------pitch loop------------- (UAV book pg. 105)
-wn_theta = 15.0
+wn_theta = 20.0
 zeta_theta = 1.707
 
 a_t_1 = -MAV.rho*Va0**2*MAV.c*MAV.S_wing/(2.*MAV.Jy)*MAV.C_m_q*MAV.c/(2.0*Va0)
@@ -96,9 +96,6 @@ B_lat_lqr = np.block([[B_lat],
                       [np.zeros((len(H_lat), len(B_lat[0])))]])
 limit_lat_lqr = np.array([[np.radians(45.)], [-np.radians(45.)], [np.radians(45.)], [-np.radians(45.)]])
 
-# Q_lon = np.diag((1.0/25.0, 1.0/1.0, 1.0/10.0, 1.0/10.0, 1.0/2000.0, 1.0/1000.0, 1.0/10.0))  # u, w, q, theta, h, h_int, Va_int
-# R_lon = np.diag((100.0/1.0, 1000.0/1.0))  # de, dt
-
 #                u_tilde,     w,       q,        theta,   h_tilde, h_int,   Va_int
 Q_lon = np.diag((10000.0/1.0, 0.0/1.0, 1.0/10.0, 0.0/1.0, 20.0/1.0, 1.0/1.0, 10.0/1.0))  # u, w, q, theta, h, h_int, Va_int
 #                de,        dt
@@ -109,13 +106,13 @@ A_lon_lqr = np.block([[A_lon, np.zeros((len(A_lon), len(H_lon)))],
                       [H_lon, np.zeros((len(H_lon), len(H_lon)))]])
 B_lon_lqr = np.block([[B_lon],
                       [np.zeros((len(H_lon), len(B_lon[0])))]])
-limit_lon_lqr = np.array([[np.radians(45.)], [-np.radians(45.)], [1.0], [0.0]])  # +delta_e, -delta_e, +delta_t, -delta_t
+limit_lon_lqr = np.array([[np.radians(45.)], [-np.radians(45.)], [1.0], [0.0]])  # +delta_a, -delta_a, +delta_r, -delta_r
 
 # --------------------------------------------------------------------------
 # ------------------------ TECS PARAMETERS ---------------------------------
 # --------------------------------------------------------------------------
 # 0 < k_T <= k_D
-K_tecs = np.array([[1.0, 3.6, 0.3, 0.3]])  #k_T, k_D, k_h, k_Va
+K_tecs = np.array([[1.0, 3.6, 0.4, 0.4]])  #k_T, k_D, k_h, k_Va
 limit_tecs = np.array([[np.radians(45.)], [-np.radians(45.)], [1.0], [0.0]])  # +delta_e, -delta_e, +delta_t, -delta_t
 thrust_throttle_kp = 0.025
 thrust_throttle_ki = 0.02

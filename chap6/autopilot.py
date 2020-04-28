@@ -19,15 +19,15 @@ from message_types.msg_state import msg_state
 
 class autopilot:
     def __init__(self, ts_control):
-        self.lateral_control_type = 0  # 0=LQR, 1=PID
-        self.longitudinal_control_type = 0  # 0=TECS, 1=LQR, 2=PID
+        self.lateral_control_type = 'PID'  # 'LQR' or 'PID'
+        self.longitudinal_control_type = 'TECS'  # 'TECS', 'LQR', or 'PID'
 
-        if self.lateral_control_type == 0:
+        if self.lateral_control_type == 'LQR':
             self.lateral_control = lqr_control(AP.A_lat_lqr, AP.B_lat_lqr, AP.Q_lat, AP.R_lat, AP.limit_lat_lqr, ts_control)
 
-        if self.longitudinal_control_type == 0:
+        if self.longitudinal_control_type == 'TECS':
             self.longitudinal_control = tecs_control(AP.K_tecs, AP.limit_tecs, ts_control, MAV)
-        elif self.longitudinal_control_type == 1:
+        elif self.longitudinal_control_type == 'LQR':
             self.longitudinal_control = lqr_control(AP.A_lon_lqr, AP.B_lon_lqr, AP.Q_lon, AP.R_lon, AP.limit_lon_lqr, ts_control)
 
         self.roll_from_aileron = pd_control_with_rate(
@@ -70,7 +70,7 @@ class autopilot:
 
     def update(self, cmd, state):
         # LATERAL CONTROLLER SELECTION
-        if self.lateral_control_type == 0:
+        if self.lateral_control_type == 'LQR':
             # LQR lateral autopilot
             x_lat = np.array([[np.sin(state.beta) * state.Va, state.p, state.r, state.phi,
                                state.chi]]).T  # using beta as an estimate for v
@@ -82,7 +82,7 @@ class autopilot:
             delta_a = u_lateral.item(0)
             delta_r = u_lateral.item(1)
             phi_c = 0
-        elif self.lateral_control_type == 1:
+        elif self.lateral_control_type == 'PID':
             # PID lateral autopilot
             chi_c = wrap(cmd.course_command, state.chi)
             phi_c = cmd.phi_feedforward + self.course_from_roll.update(chi_c, state.chi)
@@ -90,7 +90,7 @@ class autopilot:
             delta_r = self.yaw_damper.update(state.r)
 
         # LONGITUDINAL CONTROLLER SELECTION
-        if self.longitudinal_control_type == 0:
+        if self.longitudinal_control_type == 'TECS':
             # TECS longitudinal autopilot
             T = self.calculate_thrust(state, self.delta)
             D = self.calculate_drag(state, self.delta)
@@ -99,7 +99,7 @@ class autopilot:
             [u_longitudinal, theta_c] = self.longitudinal_control.update(x_tecs, command)
             delta_e = u_longitudinal.item(0)
             delta_t = u_longitudinal.item(1)
-        elif self.longitudinal_control_type == 1:
+        elif self.longitudinal_control_type == 'LQR':
             # LQR longitudinal autopilot
             x_lon = np.array([[np.sin(state.alpha) * state.Va, np.sin(state.alpha) * state.Va, state.q, state.theta,
                                state.h]]).T  # u, w, q, theta, h
@@ -115,7 +115,7 @@ class autopilot:
             delta_e = u_longitudinal.item(0)  # + MAV.delta_e_star
             delta_t = u_longitudinal.item(1)  # + MAV.delta_t_star
             theta_c = MAV.alpha_star
-        elif self.longitudinal_control_type == 2:
+        elif self.longitudinal_control_type == 'PID':
             # PID longitudinal autopilot
             h_c = cmd.altitude_command
             theta_c = self.altitude_from_pitch.update(h_c, state.h)
